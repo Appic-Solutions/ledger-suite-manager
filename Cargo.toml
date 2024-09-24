@@ -1,0 +1,40 @@
+[package]
+name = "icrc_twin_ledgers_manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+candid = "0.10.6"
+
+
+ic-canister-log = "0.2.0"
+ic-cdk = "0.13.5"
+ic-cbor = "2.6.0"
+ic-cdk-macros = "0.9.0"
+ic-cdk-timers = "0.7.0"
+ic-stable-structures="0.6.5"
+ic-crypto-sha2={ git = "https://github.com/dfinity/ic.git"}
+ic-management-canister-types = { git = "https://github.com/dfinity/ic.git" }
+ic-crypto-secp256k1 = { git = "https://github.com/dfinity/ic.git" }
+ic-utils-ensure = { git = "https://github.com/dfinity/ic.git" }
+icrc-ledger-client-cdk = { git = "https://github.com/dfinity/ic.git" }
+icrc-ledger-types={ git = "https://github.com/dfinity/ic.git"}
+ic-base-types={ git = "https://github.com/dfinity/ic.git"}
+ic-icrc1-index-ng = { git = "https://github.com/dfinity/ic.git"}
+ic-icrc1-ledger = { git = "https://github.com/dfinity/ic.git"}
+ic-ethereum-types = { git = "https://github.com/dfinity/ic.git"}
+
+
+
+hex = { version = "0.4.3", features = ["serde"] }
+num-traits="0.2.19"
+
+
+serde = { version = "1.0.203", features = ["derive"] }
+serde_bytes = "0.11.15"
+serde_cbor = "0.11.2"
+serde_json = { version = "^1.0.107" }
+
+
+scopeguard = "1.1.0"
+futures = "0.3.30"
