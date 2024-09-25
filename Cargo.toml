@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 candid = "0.10.6"
 
-
+ic0 = "0.21.1"
 ic-canister-log = "0.2.0"
 ic-cdk = "0.13.5"
 ic-cbor = "2.6.0"
@@ -24,6 +24,7 @@ ic-icrc1-index-ng = { git = "https://github.com/dfinity/ic.git"}
 ic-icrc1-ledger = { git = "https://github.com/dfinity/ic.git"}
 ic-ethereum-types = { git = "https://github.com/dfinity/ic.git"}
 
+ciborium = "0.2.1"
 
 
 hex = { version = "0.4.3", features = ["serde"] }
@@ -45,8 +46,6 @@ async-trait = "0.1.81"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-ic-crypto-test-utils-reproducible-rng = { git = "https://github.com/dfinity/ic.git"}
-ic-state-machine-tests = { git = "https://github.com/dfinity/ic.git"}
 maplit = "1"
 mockall ="0.13.0"
 paste = "1.0.12"
