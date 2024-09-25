@@ -38,3 +38,20 @@ serde_json = { version = "^1.0.107" }
 
 scopeguard = "1.1.0"
 futures = "0.3.30"
+
+async-trait = "0.1.81"
+
+
+
+[dev-dependencies]
+assert_matches = "1.5.0"
+ic-crypto-test-utils-reproducible-rng = { git = "https://github.com/dfinity/ic.git"}
+ic-state-machine-tests = { git = "https://github.com/dfinity/ic.git"}
+maplit = "1"
+mockall ="0.13.0"
+paste = "1.0.12"
+proptest = "1.5.0"
+scraper = "0.17.1"
+tokio = { version = "1.40.0", features = ["full"] }
+
+
