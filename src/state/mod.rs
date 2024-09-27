@@ -8,7 +8,6 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display, Formatter};
-use std::iter::once;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
@@ -31,6 +30,10 @@ pub struct Wasm<T> {
     hash: WasmHash,
     marker: PhantomData<T>,
 }
+
+pub type LedgerWasm = Wasm<Ledger>;
+pub type IndexWasm = Wasm<Index>;
+pub type ArchiveWasm = Wasm<Archive>;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]
 #[serde(from = "serde_bytes::ByteArray<N>", into = "serde_bytes::ByteArray<N>")]

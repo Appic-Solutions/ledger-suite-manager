@@ -1,5 +1,7 @@
 use crate::ledger_suite_manager::{Task, TaskExecution};
-use crate::state::{Archive, Index, Ledger, Wasm, WasmHash};
+use crate::state::{
+    Archive, ArchiveWasm, Index, IndexWasm, Ledger, LedgerSuiteVersion, LedgerWasm, Wasm, WasmHash,
+};
 use crate::storage::memory::{
     deadline_by_task_memory, task_queue_memory, wasm_store_memory, StableMemory,
 };
@@ -138,4 +140,102 @@ impl Storable for Task {
     }
 
     const BOUND: Bound = Bound::Unbounded;
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum WasmStoreError {
+    WasmMismatch {
+        wasm_hash: WasmHash,
+        expected_marker: u8,
+        actual_marker: u8,
+    },
+}
+
+/// Inserts the wasm into the store.
+///
+/// If a wasm with the same hash is already present and has the same type,
+/// the store will not be modified.
+///
+/// # Errors
+/// * [`WasmStoreError::WasmMismatch`] if a wasm with the same hash but a different type is already present
+///
+pub fn wasm_store_try_insert<T: StorableWasm>(
+    wasm_store: &mut WasmStore,
+    timestamp: u64,
+    wasm: Wasm<T>,
+) -> Result<(), WasmStoreError> {
+    let wasm_hash = wasm.hash().clone();
+    let storable_wasm = StoredWasm {
+        timestamp,
+        binary: wasm.to_bytes(),
+        marker: T::MARKER,
+    };
+    match wasm_store.get(&wasm_hash) {
+        Some(stored_wasm) if stored_wasm.marker == storable_wasm.marker => Ok(()),
+        Some(stored_wasm) => Err(WasmStoreError::WasmMismatch {
+            wasm_hash,
+            expected_marker: storable_wasm.marker,
+            actual_marker: stored_wasm.marker,
+        }),
+        None => {
+            assert_eq!(
+                wasm_store.insert(wasm_hash, storable_wasm),
+                None,
+                "unexpected previous value"
+            );
+            Ok(())
+        }
+    }
+}
+
+/// Retrieves a wasm identified by its hash from the store, or `Ok(None)` if no such wasm is present.
+///
+/// # Errors
+/// * [`WasmStoreError::WasmMismatch`] if a wasm with the given hash but an unexpected type is present
+pub fn wasm_store_try_get<T: StorableWasm>(
+    wasm_store: &WasmStore,
+    wasm_hash: &WasmHash,
+) -> Result<Option<Wasm<T>>, WasmStoreError> {
+    match wasm_store.get(wasm_hash) {
+        Some(stored_wasm) => {
+            if stored_wasm.marker != T::MARKER {
+                return Err(WasmStoreError::WasmMismatch {
+                    wasm_hash: wasm_hash.clone(),
+                    expected_marker: T::MARKER,
+                    actual_marker: stored_wasm.marker,
+                });
+            }
+            Ok(Some(Wasm::from(stored_wasm.binary)))
+        }
+        None => Ok(None),
+    }
+}
+
+pub fn record_icrc1_ledger_suite_wasms(
+    wasm_store: &mut WasmStore,
+    timestamp: u64,
+) -> Result<LedgerSuiteVersion, WasmStoreError> {
+    let ledger_compressed_wasm_hash =
+        record_wasm(wasm_store, timestamp, LedgerWasm::from(LEDGER_BYTECODE))?;
+    let index_compressed_wasm_hash =
+        record_wasm(wasm_store, timestamp, IndexWasm::from(INDEX_BYTECODE))?;
+    let archive_compressed_wasm_hash = record_wasm(
+        wasm_store,
+        timestamp,
+        ArchiveWasm::from(ARCHIVE_NODE_BYTECODE),
+    )?;
+    Ok(LedgerSuiteVersion {
+        ledger_compressed_wasm_hash,
+        index_compressed_wasm_hash,
+        archive_compressed_wasm_hash,
+    })
+}
+
+fn record_wasm<T: StorableWasm>(
+    wasm_store: &mut WasmStore,
+    timestamp: u64,
+    wasm: Wasm<T>,
+) -> Result<WasmHash, WasmStoreError> {
+    let hash = wasm.hash().clone();
+    wasm_store_try_insert(wasm_store, timestamp, wasm).map(|()| hash)
 }
