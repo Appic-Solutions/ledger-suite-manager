@@ -2,6 +2,7 @@ use candid::Principal;
 use ic_cdk::trap;
 use ic_ethereum_types::Address;
 use ic_stable_structures::{storable::Bound, Cell, Storable};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_bytes::ByteArray;
 use std::borrow::Cow;
@@ -11,6 +12,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::str::FromStr;
 
+use crate::endpoints::{CyclesManagement, Erc20Contract};
 use crate::ledger_suite_manager::Task;
 use crate::storage::memory::{state_memory, StableMemory};
 
@@ -214,6 +216,17 @@ impl Erc20Token {
     }
 }
 
+impl TryFrom<Erc20Contract> for Erc20Token {
+    type Error = String;
+
+    fn try_from(contract: crate::endpoints::Erc20Contract) -> Result<Self, Self::Error> {
+        Ok(Self(
+            ChainId(contract.chain_id.0.to_u64().ok_or("chain_id is not u64")?),
+            Address::from_str(&contract.address)?,
+        ))
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct ChainId(u64);
@@ -223,17 +236,6 @@ impl AsRef<u64> for ChainId {
         &self.0
     }
 }
-
-// impl TryFrom<crate::candid::Erc20Contract> for Erc20Token {
-//     type Error = String;
-
-//     fn try_from(contract: crate::candid::Erc20Contract) -> Result<Self, Self::Error> {
-//         Ok(Self(
-//             ChainId(contract.chain_id.0.to_u64().ok_or("chain_id is not u64")?),
-//             Address::from_str(&contract.address)?,
-//         ))
-//     }
-// }
 
 #[derive(Clone, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct ManagedCanisters {
@@ -476,12 +478,15 @@ pub struct LedgerSuiteCreationFeeToken {
     pub icp: MinimumLedgerSuiteCreationFee,
     pub appic: MinimumLedgerSuiteCreationFee,
 }
+
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct State {
     managed_canisters: ManagedCanisters,
-    // cycles_management: CyclesManagement,
+    cycles_management: CyclesManagement,
     more_controller_ids: Vec<Principal>,
-    minter_id: Option<Principal>,
+
+    // For every evm chain there is a specific minter canister
+    minter_id: BTreeMap<ChainId, Principal>,
     /// Locks preventing concurrent execution timer tasks
     pub active_tasks: BTreeSet<Task>,
     #[serde(default)]
@@ -498,17 +503,17 @@ impl State {
         &self.more_controller_ids
     }
 
-    pub fn minter_id(&self) -> Option<&Principal> {
-        self.minter_id.as_ref()
+    pub fn minter_id(&self, chain_id: &ChainId) -> Option<&Principal> {
+        self.minter_id.get(chain_id)
     }
 
-    // pub fn cycles_management(&self) -> &CyclesManagement {
-    //     &self.cycles_management
-    // }
+    pub fn cycles_management(&self) -> &CyclesManagement {
+        &self.cycles_management
+    }
 
-    // pub fn cycles_management_mut(&mut self) -> &mut CyclesManagement {
-    //     &mut self.cycles_management
-    // }
+    pub fn cycles_management_mut(&mut self) -> &mut CyclesManagement {
+        &mut self.cycles_management
+    }
 
     pub fn all_managed_canisters_iter(&self) -> impl Iterator<Item = (Erc20Token, &Canisters)> {
         self.managed_canisters.all_canisters_iter()
@@ -547,16 +552,16 @@ impl State {
         self.managed_canisters.get_mut(token_id)
     }
 
-    // pub fn managed_status<'a, T: 'a>(
-    //     &'a self,
-    //     token_id: &Erc20Token,
-    // ) -> Option<&'a ManagedCanisterStatus>
-    // where
-    //     Canisters: ManageSingleCanister<T>,
-    // {
-    //     self.managed_canisters(token_id)
-    //         .and_then(|c| c.get().map(|c| &c.status))
-    // }
+    pub fn managed_status<'a, T: 'a>(
+        &'a self,
+        token: &Erc20Token,
+    ) -> Option<&'a ManagedCanisterStatus>
+    where
+        Canisters: ManageSingleCanister<T>,
+    {
+        self.managed_canisters(token)
+            .and_then(|c| c.get().map(|c: &Canister<T>| &c.status))
+    }
 
     // /// Record other canisters managed by the orchestrator.
     // pub fn record_manage_other_canisters(&mut self, other_canisters: InstalledLedgerSuite) {
@@ -565,11 +570,10 @@ impl State {
     //         .insert_once(token_id, Canisters::from(other_canisters));
     // }
 
-    // pub fn record_new_erc20_token(&mut self, contract: Erc20Token, metadata: CanistersMetadata) {
-    //     let token_id = TokenId::from(contract);
-    //     self.managed_canisters
-    //         .insert_once(token_id, Canisters::new(metadata));
-    // }
+    pub fn record_new_erc20_token(&mut self, token: Erc20Token, metadata: CanistersMetadata) {
+        self.managed_canisters
+            .insert_once(token, Canisters::new(metadata));
+    }
 
     // pub fn record_archives(&mut self, token_id: &TokenId, archives: Vec<Principal>) {
     //     let canisters = self
@@ -578,51 +582,46 @@ impl State {
     //     canisters.archives = archives;
     // }
 
-    // pub fn record_created_canister<T: Debug>(
-    //     &mut self,
-    //     contract: &Erc20Token,
-    //     canister_id: Principal,
-    // ) where
-    //     Canisters: ManageSingleCanister<T>,
-    // {
-    //     let token_id = TokenId::from(contract.clone());
-    //     let canisters = self
-    //         .managed_canisters_mut(&token_id)
-    //         .unwrap_or_else(|| panic!("BUG: token {:?} is not managed", token_id));
-    //     canisters
-    //         .try_insert(Canister::<T>::new(ManagedCanisterStatus::Created {
-    //             canister_id,
-    //         }))
-    //         .unwrap_or_else(|e| {
-    //             panic!(
-    //                 "BUG: canister {} already created: {:?}",
-    //                 Canisters::display_name(),
-    //                 e
-    //             )
-    //         });
-    // }
+    pub fn record_created_canister<T: Debug>(&mut self, token: &Erc20Token, canister_id: Principal)
+    where
+        Canisters: ManageSingleCanister<T>,
+    {
+        let canisters = self
+            .managed_canisters_mut(&token)
+            .unwrap_or_else(|| panic!("BUG: token {:?} is not managed", token));
+        canisters
+            .try_insert(Canister::<T>::new(ManagedCanisterStatus::Created {
+                canister_id,
+            }))
+            .unwrap_or_else(|e| {
+                panic!(
+                    "BUG: canister {} already created: {:?}",
+                    Canisters::display_name(),
+                    e
+                )
+            });
+    }
 
-    // pub fn record_installed_canister<T>(&mut self, contract: &Erc20Token, wasm_hash: WasmHash)
-    // where
-    //     Canisters: ManageSingleCanister<T>,
-    // {
-    //     let token_id = TokenId::from(contract.clone());
-    //     let managed_canister = self
-    //         .managed_canisters_mut(&token_id)
-    //         .and_then(Canisters::get_mut)
-    //         .unwrap_or_else(|| {
-    //             panic!(
-    //                 "BUG: no managed canisters or no {} canister for {:?}",
-    //                 Canisters::display_name(),
-    //                 token_id
-    //             )
-    //         });
-    //     let canister_id = *managed_canister.canister_id();
-    //     managed_canister.status = ManagedCanisterStatus::Installed {
-    //         canister_id,
-    //         installed_wasm_hash: wasm_hash,
-    //     };
-    // }
+    pub fn record_installed_canister<T>(&mut self, token: &Erc20Token, wasm_hash: WasmHash)
+    where
+        Canisters: ManageSingleCanister<T>,
+    {
+        let managed_canister: &mut Canister<T> = self
+            .managed_canisters_mut(&token)
+            .and_then(Canisters::get_mut)
+            .unwrap_or_else(|| {
+                panic!(
+                    "BUG: no managed canisters or no {} canister for {:?}",
+                    Canisters::display_name(),
+                    token
+                )
+            });
+        let canister_id = *managed_canister.canister_id();
+        managed_canister.status = ManagedCanisterStatus::Installed {
+            canister_id,
+            installed_wasm_hash: wasm_hash,
+        };
+    }
 
     // pub fn validate_config(&self) -> Result<(), InvalidStateError> {
     //     const MAX_ADDITIONAL_CONTROLLERS: usize = 9;
@@ -671,4 +670,73 @@ pub fn init_state(state: State) {
             .set(ConfigState::Initialized(state))
             .expect("failed to initialize state in stable cell")
     });
+}
+
+pub trait ManageSingleCanister<T> {
+    fn display_name() -> &'static str;
+
+    fn get(&self) -> Option<&Canister<T>>;
+
+    fn get_mut(&mut self) -> Option<&mut Canister<T>>;
+
+    fn try_insert(&mut self, canister: Canister<T>) -> Result<(), OccupiedError<Canister<T>>>;
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct OccupiedError<T> {
+    value: T,
+}
+
+impl ManageSingleCanister<Ledger> for Canisters {
+    fn display_name() -> &'static str {
+        "ledger"
+    }
+
+    fn get(&self) -> Option<&Canister<Ledger>> {
+        self.ledger.as_ref()
+    }
+
+    fn get_mut(&mut self) -> Option<&mut Canister<Ledger>> {
+        self.ledger.as_mut()
+    }
+
+    fn try_insert(
+        &mut self,
+        canister: Canister<Ledger>,
+    ) -> Result<(), OccupiedError<Canister<Ledger>>> {
+        match self.get() {
+            Some(c) => Err(OccupiedError { value: c.clone() }),
+            None => {
+                self.ledger = Some(canister);
+                Ok(())
+            }
+        }
+    }
+}
+
+impl ManageSingleCanister<Index> for Canisters {
+    fn display_name() -> &'static str {
+        "index"
+    }
+
+    fn get(&self) -> Option<&Canister<Index>> {
+        self.index.as_ref()
+    }
+
+    fn get_mut(&mut self) -> Option<&mut Canister<Index>> {
+        self.index.as_mut()
+    }
+
+    fn try_insert(
+        &mut self,
+        canister: Canister<Index>,
+    ) -> Result<(), OccupiedError<Canister<Index>>> {
+        match self.get() {
+            Some(c) => Err(OccupiedError { value: c.clone() }),
+            None => {
+                self.index = Some(canister);
+                Ok(())
+            }
+        }
+    }
 }

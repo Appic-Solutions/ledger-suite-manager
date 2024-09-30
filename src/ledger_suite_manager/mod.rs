@@ -1,3 +1,5 @@
+mod install_ls;
+
 use candid::Principal;
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
@@ -7,7 +9,9 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 use std::time::Duration;
 
-use crate::state::Erc20Token;
+use crate::management::CallError;
+use crate::state::{Erc20Token, WasmHash};
+use crate::storage::WasmStoreError;
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]
@@ -32,6 +36,19 @@ impl Task {
             Task::UpgradeLedgerSuite => false,
         }
     }
+}
+
+pub enum TaskError {
+    CanisterCreationError(CallError),
+    InstallCodeError(CallError),
+    CanisterStatusError(CallError),
+    WasmHashNotFound(WasmHash),
+    WasmStoreError(WasmStoreError),
+    LedgerNotFound(Erc20Token),
+    InterCanisterCallError(CallError),
+    InsufficientCyclesToTopUp { required: u128, available: u128 },
+    // DiscoverArchivesError(DiscoverArchivesError),
+    // UpgradeLedgerSuiteError(UpgradeLedgerSuiteError),
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]

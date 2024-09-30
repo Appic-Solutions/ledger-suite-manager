@@ -12,6 +12,13 @@ use serde::Serialize;
 use std::borrow::Cow;
 use std::cell::RefCell;
 
+// Wasm converted to byte code
+pub(crate) const LEDGER_BYTECODE: &[u8] = include_bytes!("../../wasm/ledger_canister_u256.wasm.gz");
+pub(crate) const INDEX_BYTECODE: &[u8] =
+    include_bytes!("../../wasm/index_ng_canister_u256.wasm.gz");
+pub(crate) const ARCHIVE_NODE_BYTECODE: &[u8] =
+    include_bytes!("../../wasm/archive_canister_u256.wasm.gz");
+
 pub(crate) mod memory {
     use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
     use ic_stable_structures::DefaultMemoryImpl;
@@ -48,6 +55,19 @@ pub(crate) mod memory {
 }
 
 pub type WasmStore = BTreeMap<WasmHash, StoredWasm, StableMemory>;
+
+pub struct TaskQueue {
+    pub queue: BTreeMap<TaskExecution, (), StableMemory>,
+    pub deadline_by_task: BTreeMap<Task, u64, StableMemory>,
+}
+
+thread_local! {
+    static WASM_STORE: RefCell<WasmStore> = RefCell::new(WasmStore::init(wasm_store_memory()));
+    pub static TASKS: RefCell<TaskQueue> = RefCell::new(TaskQueue {
+        queue: BTreeMap::init(task_queue_memory()),
+        deadline_by_task: BTreeMap::init(deadline_by_task_memory()),
+    });
+}
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct StoredWasm {
@@ -238,4 +258,56 @@ fn record_wasm<T: StorableWasm>(
 ) -> Result<WasmHash, WasmStoreError> {
     let hash = wasm.hash().clone();
     wasm_store_try_insert(wasm_store, timestamp, wasm).map(|()| hash)
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum WasmHashError {
+    Invalid(String),
+    NotFound(WasmHash),
+}
+
+pub fn validate_wasm_hashes(
+    wasm_store: &WasmStore,
+    ledger_hash: Option<&str>,
+    index_hash: Option<&str>,
+    archive_hash: Option<&str>,
+) -> Result<[Option<WasmHash>; 3], WasmHashError> {
+    let [ledger_compressed_wasm_hash, index_compressed_wasm_hash, archive_compressed_wasm_hash] =
+        WasmHash::from_distinct_opt_str([ledger_hash, index_hash, archive_hash])
+            .map_err(WasmHashError::Invalid)?;
+    if let Some(ledger_hash) = &ledger_compressed_wasm_hash {
+        if !wasm_store_contain::<Ledger>(wasm_store, ledger_hash) {
+            return Err(WasmHashError::NotFound(ledger_hash.clone()));
+        }
+    }
+    if let Some(index_hash) = &index_compressed_wasm_hash {
+        if !wasm_store_contain::<Index>(wasm_store, index_hash) {
+            return Err(WasmHashError::NotFound(index_hash.clone()));
+        }
+    }
+    if let Some(archive_hash) = &archive_compressed_wasm_hash {
+        if !wasm_store_contain::<Archive>(wasm_store, archive_hash) {
+            return Err(WasmHashError::NotFound(archive_hash.clone()));
+        }
+    }
+    Ok([
+        ledger_compressed_wasm_hash,
+        index_compressed_wasm_hash,
+        archive_compressed_wasm_hash,
+    ])
+}
+
+pub fn wasm_store_contain<T: StorableWasm>(wasm_store: &WasmStore, wasm_hash: &WasmHash) -> bool {
+    match wasm_store_try_get::<T>(wasm_store, wasm_hash) {
+        Ok(Some(_)) => true,
+        Ok(None) | Err(_) => false,
+    }
+}
+
+pub fn read_wasm_store<R>(f: impl FnOnce(&WasmStore) -> R) -> R {
+    WASM_STORE.with(|w| f(&w.borrow()))
+}
+
+pub fn mutate_wasm_store<R>(f: impl FnOnce(&mut WasmStore) -> R) -> R {
+    WASM_STORE.with(|w| f(&mut w.borrow_mut()))
 }
