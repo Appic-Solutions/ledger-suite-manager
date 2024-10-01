@@ -1,4 +1,5 @@
-use icrc_ledger_types::icrc1::account::Subaccount;
+use candid::Principal;
+use icrc_ledger_types::icrc1::account::{Account, Subaccount};
 use num_traits::ToPrimitive;
 
 use crate::{
@@ -25,7 +26,4 @@ pub fn checker() {
     // println!("{:?}", ledger_compressed_wasm_hash);
     // println!("{:?}", index_compressed_wasm_hash);
     // println!("{:?}", archive_compressed_wasm_hash);
-
-    let sub: Subaccount = LEDGER_FEE_SUBACCOUNT;
-    print!("{:?}", sub.map(|f| f.to_u32()));
 }

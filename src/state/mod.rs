@@ -575,12 +575,12 @@ impl State {
             .insert_once(token, Canisters::new(metadata));
     }
 
-    // pub fn record_archives(&mut self, token_id: &TokenId, archives: Vec<Principal>) {
-    //     let canisters = self
-    //         .managed_canisters_mut(token_id)
-    //         .unwrap_or_else(|| panic!("BUG: token {:?} is not managed", token_id));
-    //     canisters.archives = archives;
-    // }
+    pub fn record_archives(&mut self, token: &Erc20Token, archives: Vec<Principal>) {
+        let canisters = self
+            .managed_canisters_mut(token)
+            .unwrap_or_else(|| panic!("BUG: token {:?} is not managed", token));
+        canisters.archives = archives;
+    }
 
     pub fn record_created_canister<T: Debug>(&mut self, token: &Erc20Token, canister_id: Principal)
     where

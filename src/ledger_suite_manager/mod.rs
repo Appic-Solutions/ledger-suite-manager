@@ -1,6 +1,9 @@
+mod discover_archives;
 mod install_ls;
+mod upgrade_ls;
 
 use candid::Principal;
+use discover_archives::DiscoverArchivesError;
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -9,7 +12,7 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 use std::time::Duration;
 
-use crate::management::CallError;
+use crate::management::{CallError, Reason};
 use crate::state::{Erc20Token, WasmHash};
 use crate::storage::WasmStoreError;
 
@@ -47,7 +50,7 @@ pub enum TaskError {
     LedgerNotFound(Erc20Token),
     InterCanisterCallError(CallError),
     InsufficientCyclesToTopUp { required: u128, available: u128 },
-    // DiscoverArchivesError(DiscoverArchivesError),
+    DiscoverArchivesError(DiscoverArchivesError),
     // UpgradeLedgerSuiteError(UpgradeLedgerSuiteError),
 }
 
@@ -55,4 +58,24 @@ pub enum TaskError {
 pub struct TaskExecution {
     pub execute_at_ns: u64,
     pub task_type: Task,
+}
+
+fn is_recoverable(e: &CallError) -> bool {
+    match &e.reason {
+        Reason::OutOfCycles => true,
+        Reason::CanisterError(msg) => msg.ends_with("is stopped") || msg.ends_with("is stopping"),
+        Reason::Rejected(_) => false,
+        Reason::TransientInternalError(_) => true,
+        Reason::InternalError(_) => false,
+    }
+}
+
+fn display_iter<I: Display, T: IntoIterator<Item = I>>(v: T) -> String {
+    format!(
+        "[{}]",
+        v.into_iter()
+            .map(|x| format!("{}", x))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
