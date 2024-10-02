@@ -11,9 +11,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 use std::time::Duration;
+use upgrade_ls::UpgradeLedgerSuiteError;
 
 use crate::management::{CallError, Reason};
-use crate::state::{Erc20Token, WasmHash};
+use crate::state::{Canister, Erc20Token, ManagedCanisterStatus, WasmHash};
 use crate::storage::WasmStoreError;
 
 #[allow(clippy::large_enum_variant)]
@@ -78,4 +79,32 @@ fn display_iter<I: Display, T: IntoIterator<Item = I>>(v: T) -> String {
             .collect::<Vec<_>>()
             .join(", ")
     )
+}
+
+fn ensure_canister_is_installed<T>(
+    token_id: &Erc20Token,
+    canister: Option<Canister<T>>,
+) -> Result<Principal, UpgradeLedgerSuiteError> {
+    match canister {
+        None => Err(UpgradeLedgerSuiteError::CanisterNotReady {
+            token_id: token_id.clone(),
+            status: None,
+            message: "canister not yet created".to_string(),
+        }),
+        Some(canister) => match canister.status() {
+            ManagedCanisterStatus::Created { canister_id } => {
+                Err(UpgradeLedgerSuiteError::CanisterNotReady {
+                    token_id: token_id.clone(),
+                    status: Some(ManagedCanisterStatus::Created {
+                        canister_id: *canister_id,
+                    }),
+                    message: "canister not yet installed".to_string(),
+                })
+            }
+            ManagedCanisterStatus::Installed {
+                canister_id,
+                installed_wasm_hash: _,
+            } => Ok(*canister_id),
+        },
+    }
 }

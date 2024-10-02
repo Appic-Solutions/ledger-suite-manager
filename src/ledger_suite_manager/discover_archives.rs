@@ -21,7 +21,7 @@ pub enum DiscoverArchivesError {
 }
 
 impl DiscoverArchivesError {
-    fn is_recoverable(&self) -> bool {
+    pub fn is_recoverable(&self) -> bool {
         match self {
             DiscoverArchivesError::InterCanisterCallError(e) => is_recoverable(e),
         }
@@ -34,7 +34,7 @@ impl From<DiscoverArchivesError> for TaskError {
     }
 }
 
-async fn discover_archives<R: CanisterRuntime, F: Fn(&Erc20Token) -> bool>(
+pub async fn discover_archives<R: CanisterRuntime, F: Fn(&Erc20Token) -> bool>(
     selector: F,
     runtime: &R,
 ) -> Result<(), DiscoverArchivesError> {
@@ -103,4 +103,12 @@ async fn call_ledger_icrc3_get_archives<R: CanisterRuntime>(
         .call_canister(ledger_id, "icrc3_get_archives", args)
         .await
         .map_err(DiscoverArchivesError::InterCanisterCallError)
+}
+
+pub fn select_all<T>() -> impl Fn(&T) -> bool {
+    |_| true
+}
+
+pub fn select_equal_to<T: PartialEq>(expected_value: &T) -> impl Fn(&T) -> bool + '_ {
+    move |x| x == expected_value
 }
