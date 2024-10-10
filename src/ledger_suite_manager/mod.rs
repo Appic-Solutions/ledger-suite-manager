@@ -1,6 +1,7 @@
 mod discover_archives;
+mod icp_cycles_convertor;
 mod install_ls;
-mod top_op;
+mod top_up;
 mod upgrade_ls;
 use candid::Principal;
 use discover_archives::DiscoverArchivesError;

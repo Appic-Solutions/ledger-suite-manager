@@ -105,7 +105,7 @@ pub struct NotifyCreateCanisterArg {
     pub subnet_type: Option<String>,
 }
 
-#[derive(CandidType, Deserialize, Debug)]
+#[derive(CandidType, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub enum NotifyError {
     Refunded {
         block_index: Option<BlockIndex>,
