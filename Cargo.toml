@@ -17,12 +17,14 @@ ic-crypto-sha2={ git = "https://github.com/dfinity/ic.git"}
 ic-management-canister-types = { git = "https://github.com/dfinity/ic.git" }
 ic-crypto-secp256k1 = { git = "https://github.com/dfinity/ic.git" }
 ic-utils-ensure = { git = "https://github.com/dfinity/ic.git" }
-icrc-ledger-client-cdk = { git = "https://github.com/dfinity/ic.git" }
-icrc-ledger-types={ git = "https://github.com/dfinity/ic.git"}
-ic-base-types={ git = "https://github.com/dfinity/ic.git"}
 ic-icrc1-index-ng = { git = "https://github.com/dfinity/ic.git"}
-ic-icrc1-ledger = { git = "https://github.com/dfinity/ic.git"}
 ic-ethereum-types = { git = "https://github.com/dfinity/ic.git"}
+icrc-ledger-types = { git = "https://github.com/dfinity/ic.git"}
+ic-base-types={ git = "https://github.com/dfinity/ic.git"}
+ic-icrc1-ledger={ git = "https://github.com/dfinity/ic.git"}
+
+ic-ledger-types = "0.13.0"
+
 
 ciborium = "0.2.1"
 

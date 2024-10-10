@@ -73,7 +73,7 @@ impl fmt::Display for Reason {
 }
 
 impl Reason {
-    fn from_reject(reject_code: RejectionCode, reject_message: String) -> Self {
+    pub fn from_reject(reject_code: RejectionCode, reject_message: String) -> Self {
         match reject_code {
             RejectionCode::SysTransient => Self::TransientInternalError(reject_message),
             RejectionCode::CanisterError => Self::CanisterError(reject_message),

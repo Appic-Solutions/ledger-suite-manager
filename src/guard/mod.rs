@@ -1,4 +1,4 @@
-use crate::scheduler::Task;
+use crate::ledger_suite_manager::Task;
 use crate::state::mutate_state;
 
 #[derive(Eq, PartialEq, Debug)]

@@ -1,5 +1,4 @@
 use candid::Principal;
-use icrc_ledger_types::icrc1::account::{Account, Subaccount};
 use num_traits::ToPrimitive;
 
 use crate::{
@@ -16,7 +15,19 @@ const LEDGER_FEE_SUBACCOUNT: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0f,
     0xee,
 ];
-pub fn checker() {
+
+/// Id of the ledger canister on the IC.
+pub const MAINNET_LEDGER_CANISTER_ID: Principal =
+    Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x01, 0x01]);
+
+pub const MAINNET_CYCLE_MINTER_CANISTER_ID: Principal =
+    Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x01, 0x01]);
+
+pub fn tester() {
+    println!("{}", MAINNET_CYCLE_MINTER_CANISTER_ID.to_string());
+    println!("{}", MAINNET_LEDGER_CANISTER_ID.to_string())
+}
+pub async fn checker() {
     // let ledger_compressed_wasm_hash = LedgerWasm::from(LEDGER_BYTECODE).hash().clone().to_string();
     // let index_compressed_wasm_hash = IndexWasm::from(INDEX_BYTECODE).hash().clone().to_string();
     // let archive_compressed_wasm_hash = ArchiveWasm::from(ARCHIVE_NODE_BYTECODE)

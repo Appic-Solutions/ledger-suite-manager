@@ -1,4 +1,4 @@
-use crate::ledger_suite_manager::{Task, TaskExecution};
+use crate::ledger_suite_manager::Task;
 use crate::state::{
     Archive, ArchiveWasm, Index, IndexWasm, Ledger, LedgerSuiteVersion, LedgerWasm, Wasm, WasmHash,
 };
@@ -56,17 +56,9 @@ pub(crate) mod memory {
 
 pub type WasmStore = BTreeMap<WasmHash, StoredWasm, StableMemory>;
 
-pub struct TaskQueue {
-    pub queue: BTreeMap<TaskExecution, (), StableMemory>,
-    pub deadline_by_task: BTreeMap<Task, u64, StableMemory>,
-}
-
 thread_local! {
     static WASM_STORE: RefCell<WasmStore> = RefCell::new(WasmStore::init(wasm_store_memory()));
-    pub static TASKS: RefCell<TaskQueue> = RefCell::new(TaskQueue {
-        queue: BTreeMap::init(task_queue_memory()),
-        deadline_by_task: BTreeMap::init(deadline_by_task_memory()),
-    });
+
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
@@ -127,40 +119,20 @@ impl Storable for StoredWasm {
     const BOUND: Bound = Bound::Unbounded;
 }
 
-impl Storable for TaskExecution {
-    fn to_bytes(&self) -> Cow<[u8]> {
-        let mut buf = vec![];
-        ciborium::ser::into_writer(&self, &mut buf)
-            .expect("failed to encode a TaskExecution to bytes");
-        Cow::Owned(buf)
-    }
+// impl Storable for Task {
+//     fn to_bytes(&self) -> Cow<[u8]> {
+//         let mut buf = vec![];
+//         ciborium::ser::into_writer(&self, &mut buf).expect("failed to encode a Task to bytes");
+//         Cow::Owned(buf)
+//     }
 
-    fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        ciborium::de::from_reader(bytes.as_ref()).unwrap_or_else(|e| {
-            panic!(
-                "failed to decode TaskExecution bytes {}: {e}",
-                hex::encode(bytes)
-            )
-        })
-    }
+//     fn from_bytes(bytes: Cow<[u8]>) -> Self {
+//         ciborium::de::from_reader(bytes.as_ref())
+//             .unwrap_or_else(|e| panic!("failed to decode Task bytes {}: {e}", hex::encode(bytes)))
+//     }
 
-    const BOUND: Bound = Bound::Unbounded;
-}
-
-impl Storable for Task {
-    fn to_bytes(&self) -> Cow<[u8]> {
-        let mut buf = vec![];
-        ciborium::ser::into_writer(&self, &mut buf).expect("failed to encode a Task to bytes");
-        Cow::Owned(buf)
-    }
-
-    fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        ciborium::de::from_reader(bytes.as_ref())
-            .unwrap_or_else(|e| panic!("failed to decode Task bytes {}: {e}", hex::encode(bytes)))
-    }
-
-    const BOUND: Bound = Bound::Unbounded;
-}
+//     const BOUND: Bound = Bound::Unbounded;
+// }
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum WasmStoreError {

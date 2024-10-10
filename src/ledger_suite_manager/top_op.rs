@@ -2,22 +2,16 @@ use num_traits::ToPrimitive;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
+use crate::ledger_suite_manager::TaskError;
 use crate::{
-    ledger_suite_manager::{
-        discover_archives::{self, select_equal_to},
-        display_iter, ensure_canister_is_installed,
-    },
+    ledger_suite_manager::display_iter,
     logs::{DEBUG, INFO},
-    management::{CallError, CanisterRuntime},
-    state::{read_state, Archive, Erc20Token, Index, Ledger, ManagedCanisterStatus, WasmHash},
-    storage::{read_wasm_store, wasm_store_try_get, StorableWasm, WasmStoreError},
+    management::CanisterRuntime,
+    state::read_state,
 };
-use candid::{Nat, Principal};
+use candid::Nat;
 use futures::future;
 use ic_canister_log::log;
-use serde::{Deserialize, Serialize};
-
-use crate::ledger_suite_manager::TaskError;
 
 async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskError> {
     let managed_principals: BTreeSet<_> =

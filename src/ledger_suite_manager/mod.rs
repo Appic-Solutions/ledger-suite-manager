@@ -28,6 +28,7 @@ pub enum Task {
         erc20_token: Erc20Token,
         minter_id: Principal,
     },
+    ConvertIcpToCycles,
 }
 
 impl Task {
@@ -38,6 +39,7 @@ impl Task {
             Task::NotifyErc20Added { .. } => false,
             Task::DiscoverArchives => true,
             Task::UpgradeLedgerSuite => false,
+            Task::ConvertIcpToCycles => true,
         }
     }
 }
@@ -52,13 +54,7 @@ pub enum TaskError {
     InterCanisterCallError(CallError),
     InsufficientCyclesToTopUp { required: u128, available: u128 },
     DiscoverArchivesError(DiscoverArchivesError),
-    // UpgradeLedgerSuiteError(UpgradeLedgerSuiteError),
-}
-
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct TaskExecution {
-    pub execute_at_ns: u64,
-    pub task_type: Task,
+    UpgradeLedgerSuiteError(UpgradeLedgerSuiteError),
 }
 
 fn is_recoverable(e: &CallError) -> bool {
