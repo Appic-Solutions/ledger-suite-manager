@@ -1,7 +1,7 @@
 pub mod cmc_declrations;
 
 use async_trait::async_trait;
-use candid::{types::result, CandidType, Nat, Principal};
+use candid::{CandidType, Nat, Principal};
 
 use ic_canister_log::log;
 use icrc_ledger_types::{
@@ -10,9 +10,8 @@ use icrc_ledger_types::{
 };
 
 use ic_ledger_types::{
-    AccountIdentifier as IcpAccountIdentifier, BlockIndex as IcpBlockIndex, Memo as IcpMemo,
-    Subaccount as IcpSubaccount, Tokens, TransferArgs as IcpTransferArgs,
-    TransferResult as IcpTransferResult, DEFAULT_FEE,
+    AccountIdentifier as IcpAccountIdentifier, Memo as IcpMemo, Subaccount as IcpSubaccount,
+    Tokens, TransferArgs as IcpTransferArgs, TransferResult as IcpTransferResult, DEFAULT_FEE,
 };
 
 use cmc_declrations::{NotifyTopUpArg, NotifyTopUpResult};
@@ -37,10 +36,13 @@ pub const MAINNET_LEDGER_CANISTER_ID: Principal =
 const TRANSFER_METHOD: &str = "transfer";
 const NOTIFY_TOP_UP_METHOD: &str = "notify_top_up";
 const TRANSFER_FROM_METHOD: &str = "icrc2_transfer_from";
-
+const ICP_BALANCE_FUNCTION: &str = "icrc1_balance_of";
 #[async_trait]
 pub trait CmcRunTime {
     fn id(&self) -> Principal;
+
+    // ICP balance of canister
+    async fn icp_balance(&self) -> Result<Nat, CallError>;
 
     // Transfers icp to cycles minter canister
     async fn transfer_cmc(&self, icp_amount: u64) -> Result<IcpTransferResult, CallError>;
@@ -76,6 +78,20 @@ impl CmcRunTime for CyclesConvertor {
         ic_cdk::id()
     }
 
+    async fn icp_balance(&self) -> Result<Nat, CallError> {
+        let result = self
+            .call_canister(
+                MAINNET_LEDGER_CANISTER_ID,
+                ICP_BALANCE_FUNCTION,
+                Account {
+                    owner: self.id(),
+                    subaccount: None,
+                },
+            )
+            .await;
+        result
+    }
+
     async fn transfer_cmc(&self, icp_amount: u64) -> Result<IcpTransferResult, CallError> {
         let target_subaccount = IcpSubaccount::from(self.id());
 
@@ -97,7 +113,7 @@ impl CmcRunTime for CyclesConvertor {
     async fn notify_top_up(&self, block_index: u64) -> Result<NotifyTopUpResult, CallError> {
         let top_up_args = NotifyTopUpArg {
             canister_id: self.id(),
-            block_index: block_index,
+            block_index,
         };
 
         let result = self
