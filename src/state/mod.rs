@@ -13,6 +13,7 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 use crate::endpoints::{CyclesManagement, Erc20Contract};
+use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use crate::ledger_suite_manager::Task;
 use crate::storage::memory::{state_memory, StableMemory};
 
@@ -283,7 +284,7 @@ pub struct Canisters {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct CanistersMetadata {
-    #[serde(rename = "ckerc20_token_symbol")]
+    #[serde(rename = "erc20_token_symbol")]
     pub token_symbol: String,
 }
 
@@ -470,13 +471,18 @@ fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> T {
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-
-pub struct MinimumLedgerSuiteCreationFee(u128);
+pub struct LedgerSuiteCreationFee {
+    pub icp: u128,
+    pub appic: u128,
+}
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct LedgerSuiteCreationFeeToken {
-    pub icp: MinimumLedgerSuiteCreationFee,
-    pub appic: MinimumLedgerSuiteCreationFee,
+pub struct ReceivedDeposit {
+    pub timestamp: u64,
+    pub amount: u128,
+    pub from_principal: Principal,
+    pub erc20_token: Erc20Token,
+    pub transfer_index: u64,
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
@@ -487,15 +493,19 @@ pub struct State {
 
     // For every evm chain there is a specific minter canister
     minter_id: BTreeMap<ChainId, Principal>,
+
     /// Locks preventing concurrent execution timer tasks
-    pub active_tasks: BTreeSet<Task>,
+    pub twin_ledger_suites_to_be_created: Vec<InstallLedgerSuiteArgs>,
     #[serde(default)]
     ledger_suite_version: Option<LedgerSuiteVersion>,
 
     // Collected icp or appic token in the beginning for ledger suite creation
-    collected_icp: u128,
-    collected_appic: u128,
-    minimum_token_for_new_ledger_suite: LedgerSuiteCreationFeeToken,
+    collected_icp_token: u128,
+    collected_appic_token: u128,
+    minimum_tokens_for_new_ledger_suite: Option<LedgerSuiteCreationFee>,
+
+    // Received deposits for twin ledger suite creation
+    received_deposits: Vec<ReceivedDeposit>,
 }
 
 impl State {
@@ -534,6 +544,10 @@ impl State {
 
     pub fn ledger_suite_version(&self) -> Option<&LedgerSuiteVersion> {
         self.ledger_suite_version.as_ref()
+    }
+
+    pub fn minimum_tokens_for_new_ledger_suite(&self) -> Option<LedgerSuiteCreationFee> {
+        self.minimum_tokens_for_new_ledger_suite.clone()
     }
 
     /// Initializes the ledger suite version if it is not already set.
@@ -575,6 +589,26 @@ impl State {
             .insert_once(token, Canisters::new(metadata));
     }
 
+    pub fn record_new_icp_deposit(
+        &mut self,
+        erc20_token: Erc20Token,
+        transfer_index: u64,
+        icp_amount: u128,
+        from_principal: Principal,
+    ) {
+        let deposit = ReceivedDeposit {
+            timestamp: ic_cdk::api::time(),
+            amount: icp_amount,
+            from_principal,
+            erc20_token,
+            transfer_index,
+        };
+        self.received_deposits.push(deposit);
+    }
+
+    pub fn record_new_ledger_suite_request(&mut self, install_args: InstallLedgerSuiteArgs) {
+        self.twin_ledger_suites_to_be_created.push(install_args);
+    }
     pub fn record_archives(&mut self, token: &Erc20Token, archives: Vec<Principal>) {
         let canisters = self
             .managed_canisters_mut(token)

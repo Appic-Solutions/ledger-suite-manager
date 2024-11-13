@@ -11,8 +11,12 @@ declare_log_buffer!(name = INFO_BUF, capacity = 1000);
 // Low-priority info messages.
 declare_log_buffer!(name = DEBUG_BUF, capacity = 1000);
 
+// Higest-priority info messages.
+declare_log_buffer!(name = ERROR_BUF, capacity = 1000);
+
 pub const INFO: PrintProxySink = PrintProxySink("INFO", &INFO_BUF);
 pub const DEBUG: PrintProxySink = PrintProxySink("DEBUG", &DEBUG_BUF);
+pub const ERROR: PrintProxySink = PrintProxySink("ERROR", &ERROR_BUF);
 
 pub struct PrintProxySink(&'static str, &'static GlobalBuffer);
 
@@ -27,6 +31,7 @@ impl Sink for PrintProxySink {
 pub enum Priority {
     Info,
     Debug,
+    Error,
 }
 
 impl FromStr for Priority {
@@ -36,6 +41,7 @@ impl FromStr for Priority {
         match s.to_lowercase().as_str() {
             "info" => Ok(Priority::Info),
             "debug" => Ok(Priority::Debug),
+            "error" => Ok(Priority::Error),
             _ => Err("could not recognize priority".to_string()),
         }
     }
@@ -79,6 +85,7 @@ impl Log {
         let logs = match priority {
             Priority::Info => export_logs(&INFO_BUF),
             Priority::Debug => export_logs(&DEBUG_BUF),
+            Priority::Error => export_logs(&ERROR_BUF),
         };
         for entry in logs {
             self.entries.push(LogEntry {
@@ -95,6 +102,7 @@ impl Log {
     pub fn push_all(&mut self) {
         self.push_logs(Priority::Info);
         self.push_logs(Priority::Debug);
+        self.push_logs(Priority::Error);
     }
 
     pub fn serialize_logs(&self, max_body_size: usize) -> String {

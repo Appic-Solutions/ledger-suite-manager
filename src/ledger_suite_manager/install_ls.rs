@@ -48,6 +48,7 @@ impl Ord for InstallLedgerSuiteArgs {
 #[derive(Clone, PartialEq, Debug)]
 pub enum InvalidAddErc20ArgError {
     InvalidErc20Contract(String),
+    ChainIdNotSupported(String),
     Erc20ContractAlreadyManaged(Erc20Token),
     WasmHashError(WasmHashError),
     InternalError(String),
@@ -62,9 +63,10 @@ impl InstallLedgerSuiteArgs {
         let token = Erc20Token::try_from(args.contract.clone())
             .map_err(|e| InvalidAddErc20ArgError::InvalidErc20Contract(e.to_string()))?;
 
+        // Check if the chain is supported by checking the minter id
         let minter_id = state.minter_id(token.chain_id()).cloned().ok_or(
-            InvalidAddErc20ArgError::InternalError(
-                "ERROR: minter principal not set or not found".to_string(),
+            InvalidAddErc20ArgError::ChainIdNotSupported(
+                "ERROR: Target evm chain is not yet supported".to_string(),
             ),
         )?;
         if let Some(_canisters) = state.managed_canisters(&token) {

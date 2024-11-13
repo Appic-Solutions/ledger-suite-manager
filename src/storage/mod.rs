@@ -1,10 +1,7 @@
-use crate::ledger_suite_manager::Task;
 use crate::state::{
     Archive, ArchiveWasm, Index, IndexWasm, Ledger, LedgerSuiteVersion, LedgerWasm, Wasm, WasmHash,
 };
-use crate::storage::memory::{
-    deadline_by_task_memory, task_queue_memory, wasm_store_memory, StableMemory,
-};
+use crate::storage::memory::{wasm_store_memory, StableMemory};
 use candid::Deserialize;
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::{BTreeMap, Storable};
@@ -32,8 +29,6 @@ pub(crate) mod memory {
 
     const STATE_MEMORY_ID: MemoryId = MemoryId::new(0);
     const WASM_STORE_MEMORY_ID: MemoryId = MemoryId::new(1);
-    const TASK_QUEUE_ID: MemoryId = MemoryId::new(2);
-    const DEADLINE_BY_TASK_ID: MemoryId = MemoryId::new(3);
 
     pub type StableMemory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -43,14 +38,6 @@ pub(crate) mod memory {
 
     pub fn wasm_store_memory() -> StableMemory {
         MEMORY_MANAGER.with(|m| m.borrow().get(WASM_STORE_MEMORY_ID))
-    }
-
-    pub fn task_queue_memory() -> StableMemory {
-        MEMORY_MANAGER.with(|m| m.borrow().get(TASK_QUEUE_ID))
-    }
-
-    pub fn deadline_by_task_memory() -> StableMemory {
-        MEMORY_MANAGER.with(|m| m.borrow().get(DEADLINE_BY_TASK_ID))
     }
 }
 

@@ -51,7 +51,7 @@ pub trait CmcRunTime {
     async fn notify_top_up(&self, block_index: u64) -> Result<NotifyTopUpResult, CallError>;
 
     // Uses icrc2_transfer_from function to deposit functoin
-    async fn deposit(
+    async fn deposit_icp(
         &self,
         icp_amount: u64,
         from: Principal,
@@ -126,7 +126,7 @@ impl CmcRunTime for CyclesConvertor {
         result
     }
 
-    async fn deposit(
+    async fn deposit_icp(
         &self,
         icp_amount: u64,
         from: Principal,

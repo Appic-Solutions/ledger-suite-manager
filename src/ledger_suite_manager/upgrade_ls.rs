@@ -1,11 +1,13 @@
 use crate::{
     ledger_suite_manager::{
         discover_archives::{self, select_equal_to},
-        display_iter, ensure_canister_is_installed,
+        display_iter,
     },
     logs::{DEBUG, INFO},
     management::{CallError, CanisterRuntime},
-    state::{read_state, Archive, Erc20Token, Index, Ledger, ManagedCanisterStatus, WasmHash},
+    state::{
+        read_state, Archive, Canister, Erc20Token, Index, Ledger, ManagedCanisterStatus, WasmHash,
+    },
     storage::{read_wasm_store, wasm_store_try_get, StorableWasm, WasmStoreError},
 };
 use candid::Principal;
@@ -285,5 +287,33 @@ impl UpgradeLedgerSuiteError {
             UpgradeLedgerSuiteError::UpgradeCanisterError(_) => true,
             UpgradeLedgerSuiteError::DiscoverArchivesError(e) => e.is_recoverable(),
         }
+    }
+}
+
+fn ensure_canister_is_installed<T>(
+    token_id: &Erc20Token,
+    canister: Option<Canister<T>>,
+) -> Result<Principal, UpgradeLedgerSuiteError> {
+    match canister {
+        None => Err(UpgradeLedgerSuiteError::CanisterNotReady {
+            token_id: token_id.clone(),
+            status: None,
+            message: "canister not yet created".to_string(),
+        }),
+        Some(canister) => match canister.status() {
+            ManagedCanisterStatus::Created { canister_id } => {
+                Err(UpgradeLedgerSuiteError::CanisterNotReady {
+                    token_id: token_id.clone(),
+                    status: Some(ManagedCanisterStatus::Created {
+                        canister_id: *canister_id,
+                    }),
+                    message: "canister not yet installed".to_string(),
+                })
+            }
+            ManagedCanisterStatus::Installed {
+                canister_id,
+                installed_wasm_hash: _,
+            } => Ok(*canister_id),
+        },
     }
 }
