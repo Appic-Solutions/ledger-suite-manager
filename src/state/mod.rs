@@ -7,14 +7,14 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_bytes::ByteArray;
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::str::FromStr;
 
 use crate::endpoints::{CyclesManagement, Erc20Contract};
 use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
-use crate::ledger_suite_manager::Task;
+use crate::ledger_suite_manager::{PeriodicTasksTypes, Task, TaskError};
 use crate::storage::memory::{state_memory, StableMemory};
 
 thread_local! {
@@ -494,10 +494,17 @@ pub struct State {
     // For every evm chain there is a specific minter canister
     minter_id: BTreeMap<ChainId, Principal>,
 
-    /// Locks preventing concurrent execution timer tasks
-    pub twin_ledger_suites_to_be_created: Vec<InstallLedgerSuiteArgs>,
+    // New LedgerSuite requests waiting to be created
+    pub twin_ledger_suites_to_be_installed: BTreeMap<Erc20Token, InstallLedgerSuiteArgs>,
+
+    // The ledger suites installs that are not recoverable
+    failed_ledger_suite_installs: BTreeMap<Erc20Token, InstallLedgerSuiteArgs>,
+
     #[serde(default)]
     ledger_suite_version: Option<LedgerSuiteVersion>,
+
+    /// Locks preventing concurrent execution timer tasks
+    pub active_tasks: HashSet<PeriodicTasksTypes>,
 
     // Collected icp or appic token in the beginning for ledger suite creation
     collected_icp_token: u128,
@@ -603,12 +610,20 @@ impl State {
             erc20_token,
             transfer_index,
         };
+        // Add to the collected icp
+        self.collected_icp_token += icp_amount;
         self.received_deposits.push(deposit);
     }
 
-    pub fn record_new_ledger_suite_request(&mut self, install_args: InstallLedgerSuiteArgs) {
-        self.twin_ledger_suites_to_be_created.push(install_args);
+    pub fn record_new_ledger_suite_request(
+        &mut self,
+        erc20_token: Erc20Token,
+        install_args: InstallLedgerSuiteArgs,
+    ) {
+        self.twin_ledger_suites_to_be_installed
+            .insert(erc20_token, install_args);
     }
+
     pub fn record_archives(&mut self, token: &Erc20Token, archives: Vec<Principal>) {
         let canisters = self
             .managed_canisters_mut(token)
@@ -655,6 +670,19 @@ impl State {
             canister_id,
             installed_wasm_hash: wasm_hash,
         };
+    }
+
+    pub fn remove_installed_ls_from_installing_queue(&mut self, erc20_token: Erc20Token) {
+        self.twin_ledger_suites_to_be_installed.remove(&erc20_token);
+    }
+
+    pub fn record_failed_ls_install(
+        &mut self,
+        erc20_token: Erc20Token,
+        install_args: InstallLedgerSuiteArgs,
+    ) {
+        self.failed_ledger_suite_installs
+            .insert(erc20_token, install_args);
     }
 
     // pub fn validate_config(&self) -> Result<(), InvalidStateError> {

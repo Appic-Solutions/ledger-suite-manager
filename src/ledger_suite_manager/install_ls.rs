@@ -27,7 +27,7 @@ const THREE_GIGA_BYTES: u64 = 3_221_225_472;
 
 #[derive(Clone, Eq, PartialEq, Debug, Deserialize, Serialize)]
 pub struct InstallLedgerSuiteArgs {
-    contract: Erc20Token,
+    pub contract: Erc20Token,
     minter_id: Principal,
     ledger_init_arg: LedgerInitArg,
     ledger_compressed_wasm_hash: WasmHash,

@@ -3,9 +3,11 @@ pub mod icp_cycles_convertor;
 pub mod install_ls;
 pub mod top_up;
 // mod upgrade_ls;
+use crate::logs::{DEBUG, INFO};
 use candid::Principal;
 use discover_archives::DiscoverArchivesError;
-use install_ls::InstallLedgerSuiteArgs;
+use ic_canister_log::log;
+use install_ls::{install_ledger_suite, InstallLedgerSuiteArgs};
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -15,9 +17,22 @@ use std::str::FromStr;
 use std::time::Duration;
 // use upgrade_ls::{UpgradeLedgerSuite, UpgradeLedgerSuiteError};
 
-use crate::management::{CallError, Reason};
-use crate::state::{Canister, Erc20Token, ManagedCanisterStatus, WasmHash};
+use crate::guard::TimerGuard;
+use crate::management::{CallError, IcCanisterRuntime, Reason};
+use crate::state::{
+    mutate_state, read_state, Canister, Erc20Token, ManagedCanisterStatus, WasmHash,
+};
 use crate::storage::WasmStoreError;
+
+// User for TimerGaurd to prevent Concurrency problems
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize, Hash, Copy)]
+pub enum PeriodicTasksTypes {
+    InstallLedgerSuite,
+    // UpgradeLedgerSuite,
+    MaybeTopUp,
+    DiscoverArchives,
+    ConvertIcpToCycles,
+}
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]
@@ -33,19 +48,7 @@ pub enum Task {
     ConvertIcpToCycles,
 }
 
-impl Task {
-    fn is_periodic(&self) -> bool {
-        match self {
-            Task::InstallLedgerSuite { .. } => false,
-            Task::MaybeTopUp => true,
-            Task::NotifyErc20Added { .. } => false,
-            Task::DiscoverArchives => true,
-            // Task::UpgradeLedgerSuite => false,
-            Task::ConvertIcpToCycles => true,
-        }
-    }
-}
-
+#[derive(Clone, Debug)]
 pub enum TaskError {
     CanisterCreationError(CallError),
     InstallCodeError(CallError),
@@ -57,6 +60,25 @@ pub enum TaskError {
     InsufficientCyclesToTopUp { required: u128, available: u128 },
     DiscoverArchivesError(DiscoverArchivesError),
     // UpgradeLedgerSuiteError(UpgradeLedgerSuiteError),
+}
+
+impl TaskError {
+    /// If the error is recoverable, the task should be retried.
+    /// Otherwise, the task should be discarded.
+    fn is_recoverable(&self) -> bool {
+        match self {
+            TaskError::CanisterCreationError(_) => true,
+            TaskError::InstallCodeError(_) => true,
+            TaskError::CanisterStatusError(_) => true,
+            TaskError::WasmHashNotFound(_) => false,
+            TaskError::WasmStoreError(_) => false,
+            TaskError::LedgerNotFound(_) => true, //ledger may not yet be created
+            TaskError::InterCanisterCallError(e) => is_recoverable(e),
+            TaskError::InsufficientCyclesToTopUp { .. } => false, //top-up task is periodic, will retry on next interval
+            TaskError::DiscoverArchivesError(e) => e.is_recoverable(),
+            // TaskError::UpgradeLedgerSuiteError(e) => e.is_recoverable(),
+        }
+    }
 }
 
 fn is_recoverable(e: &CallError) -> bool {
@@ -77,4 +99,64 @@ fn display_iter<I: Display, T: IntoIterator<Item = I>>(v: T) -> String {
             .collect::<Vec<_>>()
             .join(", ")
     )
+}
+
+pub async fn process_install_ledger_suites() {
+    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::InstallLedgerSuite) {
+        Ok(gaurd) => gaurd,
+        Err(e) => {
+            log!(
+                DEBUG,
+                "Failed retrieving timer guard to install ledger suites: {e:?}",
+            );
+            return;
+        }
+    };
+    let twin_ledger_suites_to_be_installed =
+        read_state(|s| s.twin_ledger_suites_to_be_installed.clone());
+
+    let runtime = IcCanisterRuntime {};
+
+    for (contract, install_args) in twin_ledger_suites_to_be_installed {
+        log!(
+            INFO,
+            "Installing a ledger suite for contract address: {}, chain_id:{:?}",
+            contract.address(),
+            contract.chain_id()
+        );
+
+        let ledger_suite_result = install_ledger_suite(&install_args, &runtime).await;
+        match ledger_suite_result {
+            Ok(_) => {
+                mutate_state(|s| s.remove_installed_ls_from_installing_queue(contract.clone()));
+                log!(
+                    INFO,
+                    "Installed a ledger suite for contract address: {}, chain_id:{:?}",
+                    contract.address(),
+                    contract.chain_id()
+                );
+            }
+
+            Err(task_error) => match task_error.is_recoverable() {
+                true => {
+                    log!(
+                        INFO,
+                        "Failed to install for contract address: {}, chain_id:{:?}. Error is recoverable and will try again in the next iteration",
+                        contract.address(),
+                        contract.chain_id()
+                    );
+                }
+                false => {
+                    mutate_state(|s| s.record_failed_ls_install(contract.clone(), install_args));
+                    log!(
+                        DEBUG,
+                        "Failed to install due to {:?} for contract address: {}, chain_id:{:?}. Error is not recoverable.",
+                        task_error,
+                        contract.address(),
+                        contract.chain_id()
+                    );
+                }
+            },
+        }
+    }
 }
