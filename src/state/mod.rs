@@ -9,10 +9,14 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
+use std::iter::once;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use crate::endpoints::{CyclesManagement, Erc20Contract};
+use crate::endpoints::{
+    CyclesManagement, Erc20Contract, InstalledNativeLedgerSuite,
+    InvalidNativeInstalledCanistersError,
+};
 use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use crate::ledger_suite_manager::{PeriodicTasksTypes, Task, TaskError};
 use crate::storage::memory::{state_memory, StableMemory};
@@ -591,6 +595,15 @@ impl State {
     //         .insert_once(token_id, Canisters::from(other_canisters));
     // }
 
+    pub fn record_new_native_erc20_token(
+        &mut self,
+        token: Erc20Token,
+        native_ls: InstalledNativeLedgerSuite,
+    ) {
+        self.managed_canisters
+            .insert_once(token, Canisters::from(native_ls));
+    }
+
     pub fn record_new_erc20_token(&mut self, token: Erc20Token, metadata: CanistersMetadata) {
         self.managed_canisters
             .insert_once(token, Canisters::new(metadata));
@@ -800,5 +813,57 @@ impl ManageSingleCanister<Index> for Canisters {
                 Ok(())
             }
         }
+    }
+}
+
+impl InstalledNativeLedgerSuite {
+    pub fn validate(
+        self,
+        state: &State,
+    ) -> Result<InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError> {
+        let symbol = self.symbol.clone();
+        let token_id = self.get_erc20_token();
+        if state.managed_canisters(&token_id).is_some() {
+            return Err(InvalidNativeInstalledCanistersError::TokenAlreadyManaged);
+        }
+        let ledger = self.ledger;
+        let ledger_wasm_hash: Hash<WASM_HASH_LENGTH> = Hash::from_str(&self.ledger_wasm_hash)
+            .map_err(|e| InvalidNativeInstalledCanistersError::WasmHashError)?;
+        let index: Principal = self.index;
+        let index_wasm_hash: Hash<WASM_HASH_LENGTH> = Hash::from_str(&self.index_wasm_hash)
+            .map_err(|e| InvalidNativeInstalledCanistersError::WasmHashError)?;
+        if ledger_wasm_hash == index_wasm_hash {
+            return Err(InvalidNativeInstalledCanistersError::WasmHashError);
+        }
+        let archives = self.archives;
+
+        let installed_principals: BTreeSet<_> = once(&ledger)
+            .chain(once(&index))
+            .chain(archives.iter())
+            .collect();
+        let managed_principals: BTreeSet<_> = state.all_managed_principals().collect();
+        let overlapping_principals: BTreeSet<_> = managed_principals
+            .intersection(&installed_principals)
+            .collect();
+        if !overlapping_principals.is_empty() {
+            return Err(InvalidNativeInstalledCanistersError::AlreadyManagedPrincipals);
+        }
+        Ok(InstalledNativeLedgerSuite {
+            symbol,
+            ledger,
+            ledger_wasm_hash: ledger_wasm_hash.to_string(),
+            index,
+            index_wasm_hash: index_wasm_hash.to_string(),
+            archives,
+            chain_id: self.chain_id,
+        })
+    }
+
+    pub fn get_erc20_token(&self) -> Erc20Token {
+        Erc20Token::new(
+            ChainId(self.chain_id.0.to_u64().unwrap()),
+            Address::from_str("0x0000000000000000000000000000000000000000")
+                .expect("Should not fail"),
+        )
     }
 }

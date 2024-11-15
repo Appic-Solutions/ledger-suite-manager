@@ -1,9 +1,19 @@
 use candid::{CandidType, Deserialize, Nat, Principal};
 use icrc_ledger_types::icrc2::transfer_from::TransferFromError;
 use serde::Serialize;
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
-use crate::{ledger_suite_manager::install_ls::InvalidAddErc20ArgError, management::CallError};
+use crate::{
+    ledger_suite_manager::install_ls::InvalidAddErc20ArgError,
+    management::CallError,
+    state::{
+        Canisters, CanistersMetadata, Hash, IndexCanister, LedgerCanister, ManagedCanisterStatus,
+        State,
+    },
+};
 
 // #[derive(Clone, Eq, PartialEq, Debug, CandidType, Deserialize)]
 // pub struct
@@ -113,4 +123,43 @@ impl CyclesManagement {
     pub fn minimum_monitored_canister_cycles(&self) -> Nat {
         self.cycles_for_archive_creation.clone() + 2_u8 * self.cycles_top_up_increment.clone()
     }
+}
+
+#[derive(Clone, PartialEq, Debug, CandidType, Deserialize)]
+pub struct InstalledNativeLedgerSuite {
+    pub symbol: String,
+    pub ledger: Principal,
+    pub ledger_wasm_hash: String,
+    pub index: Principal,
+    pub index_wasm_hash: String,
+    pub archives: Vec<Principal>,
+    pub chain_id: Nat,
+}
+
+impl From<InstalledNativeLedgerSuite> for Canisters {
+    fn from(value: InstalledNativeLedgerSuite) -> Self {
+        Self {
+            ledger: Some(LedgerCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: value.ledger,
+                installed_wasm_hash: Hash::from_str(&value.ledger_wasm_hash)
+                    .expect("Wasm Hashes Provided by minter casniter should not fail"),
+            })),
+            index: Some(IndexCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: value.index,
+                installed_wasm_hash: Hash::from_str(&value.index_wasm_hash)
+                    .expect("Wasm Hashes Provided by minter casniter should not fail"),
+            })),
+            archives: value.archives,
+            metadata: CanistersMetadata {
+                token_symbol: value.symbol,
+            },
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, CandidType)]
+pub enum InvalidNativeInstalledCanistersError {
+    WasmHashError,
+    TokenAlreadyManaged,
+    AlreadyManagedPrincipals,
 }

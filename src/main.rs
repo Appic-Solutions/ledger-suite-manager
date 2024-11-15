@@ -1,11 +1,17 @@
+use std::str::FromStr;
+
 use ic_canister_log::log;
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
+use ic_ethereum_types::Address;
 use icrc_twin_ledgers_manager::cmc_client::{self, CmcRunTime, CyclesConvertor};
+use icrc_twin_ledgers_manager::endpoints::{
+    InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
+};
 use icrc_twin_ledgers_manager::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use icrc_twin_ledgers_manager::ledger_suite_manager::process_install_ledger_suites;
 use icrc_twin_ledgers_manager::logs::{DEBUG, ERROR, INFO};
 
-use icrc_twin_ledgers_manager::state::{mutate_state, read_state, Erc20Token};
+use icrc_twin_ledgers_manager::state::{mutate_state, read_state, ChainId, Erc20Token};
 use icrc_twin_ledgers_manager::storage::read_wasm_store;
 use icrc_twin_ledgers_manager::INSTALL_LEDGER_SUITE_INTERVAL;
 use icrc_twin_ledgers_manager::{
@@ -39,7 +45,23 @@ fn setup_timers() {
 }
 
 #[update]
-async fn add_new_erc20_twin(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
+fn add_new_native_ls(
+    native_ls: InstalledNativeLedgerSuite,
+) -> Result<(), InvalidNativeInstalledCanistersError> {
+    // Validate args corectness
+
+    let validate_native_ls = read_state(|s| native_ls.validate(s))?;
+
+    let erc20_token = validate_native_ls.get_erc20_token();
+
+    // Add the native ldger suite to the state
+    mutate_state(|s| s.record_new_native_erc20_token(erc20_token, validate_native_ls));
+
+    Ok(())
+}
+
+#[update]
+async fn add_new_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
     // Validate args correctness
     let install_ledger_suite_args = read_state(|s| {
         read_wasm_store(|w| InstallLedgerSuiteArgs::validate_add_erc20(s, w, erc20_args.clone()))
