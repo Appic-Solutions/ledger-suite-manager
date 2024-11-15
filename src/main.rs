@@ -8,7 +8,9 @@ use icrc_twin_ledgers_manager::endpoints::{
     InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
 };
 use icrc_twin_ledgers_manager::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
-use icrc_twin_ledgers_manager::ledger_suite_manager::process_install_ledger_suites;
+use icrc_twin_ledgers_manager::ledger_suite_manager::{
+    process_discover_archives, process_install_ledger_suites,
+};
 use icrc_twin_ledgers_manager::logs::{DEBUG, ERROR, INFO};
 
 use icrc_twin_ledgers_manager::state::{mutate_state, read_state, ChainId, Erc20Token};
@@ -33,7 +35,9 @@ fn setup_timers() {
     });
 
     // Discovering Archives Spwaned by ledgers.
-    ic_cdk_timers::set_timer_interval(DISCOVER_ARCHIVES_INTERVAL, || ic_cdk::spawn(checker()));
+    ic_cdk_timers::set_timer_interval(DISCOVER_ARCHIVES_INTERVAL, || {
+        ic_cdk::spawn(process_discover_archives())
+    });
 
     // Check Canister balances and top-op in case of low in cycles
     ic_cdk_timers::set_timer_interval(MAYBE_TOP_OP_INTERVAL, || ic_cdk::spawn(checker()));

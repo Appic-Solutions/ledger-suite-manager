@@ -694,6 +694,7 @@ impl State {
         erc20_token: Erc20Token,
         install_args: InstallLedgerSuiteArgs,
     ) {
+        self.remove_installed_ls_from_installing_queue(erc20_token.clone());
         self.failed_ledger_suite_installs
             .insert(erc20_token, install_args);
     }

@@ -5,7 +5,7 @@ pub mod top_up;
 // mod upgrade_ls;
 use crate::logs::{DEBUG, INFO};
 use candid::Principal;
-use discover_archives::DiscoverArchivesError;
+use discover_archives::{discover_archives, select_all, DiscoverArchivesError};
 use ic_canister_log::log;
 use install_ls::{install_ledger_suite, InstallLedgerSuiteArgs};
 use serde::{Deserialize, Serialize};
@@ -158,5 +158,39 @@ pub async fn process_install_ledger_suites() {
                 }
             },
         }
+    }
+}
+
+pub async fn process_discover_archives() {
+    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::DiscoverArchives) {
+        Ok(gaurd) => gaurd,
+        Err(e) => {
+            log!(
+                DEBUG,
+                "Failed retrieving timer guard to install ledger suites: {e:?}",
+            );
+            return;
+        }
+    };
+
+    let runtime = IcCanisterRuntime {};
+
+    let archive_discovery_result = discover_archives(select_all(), &runtime).await;
+
+    match archive_discovery_result {
+        Ok(_) => {}
+        Err(task_error) => match task_error.is_recoverable() {
+            true => {
+                log!(
+                    INFO,
+                    "Failed to discover archives. Error is recoverable and will try again in the next iteratio");
+            }
+            false => {
+                log!(
+                    DEBUG,
+                    "Failed to discover archives, Error is not recoverable."
+                );
+            }
+        },
     }
 }
