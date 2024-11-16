@@ -13,7 +13,7 @@ use candid::Nat;
 use futures::future;
 use ic_canister_log::log;
 
-async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskError> {
+pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskError> {
     let managed_principals: BTreeSet<_> =
         read_state(|s| s.all_managed_principals().cloned().collect());
     if managed_principals.is_empty() {

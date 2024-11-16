@@ -3,9 +3,11 @@ pub mod icp_cycles_convertor;
 pub mod install_ls;
 pub mod top_up;
 // mod upgrade_ls;
+use crate::ledger_suite_manager::top_up::maybe_top_up;
 use crate::logs::{DEBUG, INFO};
 use candid::Principal;
 use discover_archives::{discover_archives, select_all, DiscoverArchivesError};
+use futures::task;
 use ic_canister_log::log;
 use install_ls::{install_ledger_suite, InstallLedgerSuiteArgs};
 use serde::{Deserialize, Serialize};
@@ -167,7 +169,7 @@ pub async fn process_discover_archives() {
         Err(e) => {
             log!(
                 DEBUG,
-                "Failed retrieving timer guard to install ledger suites: {e:?}",
+                "Failed retrieving timer guard to run discover_archives process: {e:?}",
             );
             return;
         }
@@ -188,9 +190,80 @@ pub async fn process_discover_archives() {
             false => {
                 log!(
                     DEBUG,
-                    "Failed to discover archives, Error is not recoverable."
+                    "Failed to discover archives, Error is not recoverable. error: {:?}",
+                    task_error
                 );
             }
         },
     }
 }
+
+pub async fn process_maybe_topup() {
+    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::MaybeTopUp) {
+        Ok(gaurd) => gaurd,
+        Err(e) => {
+            log!(
+                DEBUG,
+                "Failed retrieving timer guard to run maybe_top_up process suites: {e:?}",
+            );
+            return;
+        }
+    };
+
+    let runtime = IcCanisterRuntime {};
+
+    let top_up_result = maybe_top_up(&runtime).await;
+
+    match top_up_result {
+        Ok(_) => {}
+        Err(task_error) => match task_error.is_recoverable() {
+            true => {
+                log!(
+                    INFO,
+                    "Failed to run maybe_top_up process. Error is recoverable and will try again in the next iteratio");
+            }
+            false => {
+                log!(
+                    DEBUG,
+                    "Failed to run maybe_top_up process, Error is not recoverable. error: {:?}",
+                    task_error
+                );
+            }
+        },
+    }
+}
+
+// pub async fn proccess_convert_icp_to_cycles() {
+//     let _gaurd = match TimerGuard::new(PeriodicTasksTypes::ConvertIcpToCycles) {
+//         Ok(gaurd) => gaurd,
+//         Err(e) => {
+//             log!(
+//                 DEBUG,
+//                 "Failed retrieving timer guard to run convert_icp_to_cycles process suites: {e:?}",
+//             );
+//             return;
+//         }
+//     };
+
+//     let runtime = IcCanisterRuntime {};
+
+//     let covnver_icp_to_cycles_result = ;
+
+//     match top_up_result {
+//         Ok(_) => {}
+//         Err(task_error) => match task_error.is_recoverable() {
+//             true => {
+//                 log!(
+//                     INFO,
+//                     "Failed to run maybe_top_up process. Error is recoverable and will try again in the next iteratio");
+//             }
+//             false => {
+//                 log!(
+//                     DEBUG,
+//                     "Failed to run maybe_top_up process, Error is not recoverable. error: {:?}",
+//                     task_error
+//                 );
+//             }
+//         },
+//     }
+// }
