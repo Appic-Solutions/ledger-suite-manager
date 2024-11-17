@@ -9,7 +9,8 @@ use icrc_twin_ledgers_manager::endpoints::{
 };
 use icrc_twin_ledgers_manager::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use icrc_twin_ledgers_manager::ledger_suite_manager::{
-    process_discover_archives, process_install_ledger_suites,
+    proccess_convert_icp_to_cycles, process_discover_archives, process_install_ledger_suites,
+    process_maybe_topup,
 };
 use icrc_twin_ledgers_manager::logs::{DEBUG, ERROR, INFO};
 
@@ -31,7 +32,7 @@ fn main() {
 fn setup_timers() {
     // Check ICP Balance and convert to Cycles
     ic_cdk_timers::set_timer_interval(ICP_TO_CYCLES_CONVERTION_INTERVAL, || {
-        ic_cdk::spawn(checker())
+        ic_cdk::spawn(proccess_convert_icp_to_cycles())
     });
 
     // Discovering Archives Spwaned by ledgers.
@@ -40,7 +41,9 @@ fn setup_timers() {
     });
 
     // Check Canister balances and top-op in case of low in cycles
-    ic_cdk_timers::set_timer_interval(MAYBE_TOP_OP_INTERVAL, || ic_cdk::spawn(checker()));
+    ic_cdk_timers::set_timer_interval(MAYBE_TOP_OP_INTERVAL, || {
+        ic_cdk::spawn(process_maybe_topup())
+    });
 
     // Check Canister balances and top-op in case of low in cycles
     ic_cdk_timers::set_timer_interval(INSTALL_LEDGER_SUITE_INTERVAL, || {

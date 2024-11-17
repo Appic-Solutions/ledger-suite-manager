@@ -233,37 +233,32 @@ pub async fn process_maybe_topup() {
     }
 }
 
-// pub async fn proccess_convert_icp_to_cycles() {
-//     let _gaurd = match TimerGuard::new(PeriodicTasksTypes::ConvertIcpToCycles) {
-//         Ok(gaurd) => gaurd,
-//         Err(e) => {
-//             log!(
-//                 DEBUG,
-//                 "Failed retrieving timer guard to run convert_icp_to_cycles process suites: {e:?}",
-//             );
-//             return;
-//         }
-//     };
+pub async fn proccess_convert_icp_to_cycles() {
+    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::ConvertIcpToCycles) {
+        Ok(gaurd) => gaurd,
+        Err(e) => {
+            log!(
+                DEBUG,
+                "Failed retrieving timer guard to run icpto cycles conversion process suites: {e:?}",
+            );
+            return;
+        }
+    };
 
-//     let runtime = IcCanisterRuntime {};
+    let runtime = CyclesConvertor {};
 
-//     let covnver_icp_to_cycles_result = ;
+    let top_up_result = convert_icp_balance_to_cycles(runtime).await;
 
-//     match top_up_result {
-//         Ok(_) => {}
-//         Err(task_error) => match task_error.is_recoverable() {
-//             true => {
-//                 log!(
-//                     INFO,
-//                     "Failed to run maybe_top_up process. Error is recoverable and will try again in the next iteratio");
-//             }
-//             false => {
-//                 log!(
-//                     DEBUG,
-//                     "Failed to run maybe_top_up process, Error is not recoverable. error: {:?}",
-//                     task_error
-//                 );
-//             }
-//         },
-//     }
-// }
+    match top_up_result {
+        Ok(cycles) => {
+            log!(INFO, "Toped_up casniter with {} cycles.", cycles);
+        }
+        Err(cycles_error) => {
+            log!(
+                INFO,
+                "Failed to mint new cycles and top_up casniter. reason: {:?}",
+                cycles_error
+            );
+        }
+    }
+}
