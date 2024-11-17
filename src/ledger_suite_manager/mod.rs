@@ -2,6 +2,8 @@ pub mod discover_archives;
 pub mod icp_cycles_convertor;
 pub mod install_ls;
 pub mod top_up;
+use crate::cmc_client::CyclesConvertor;
+use crate::ledger_suite_manager::icp_cycles_convertor::convert_icp_balance_to_cycles;
 // mod upgrade_ls;
 use crate::ledger_suite_manager::top_up::maybe_top_up;
 use crate::logs::{DEBUG, INFO};

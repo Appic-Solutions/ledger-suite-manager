@@ -7,7 +7,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_bytes::ByteArray;
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::once;
 use std::marker::PhantomData;
@@ -18,7 +18,7 @@ use crate::endpoints::{
     InvalidNativeInstalledCanistersError,
 };
 use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
-use crate::ledger_suite_manager::{PeriodicTasksTypes, Task, TaskError};
+use crate::ledger_suite_manager::PeriodicTasksTypes;
 use crate::storage::memory::{state_memory, StableMemory};
 
 thread_local! {
@@ -528,6 +528,10 @@ impl State {
         self.minter_id.get(chain_id)
     }
 
+    pub fn all_minter_ids(&self) -> Vec<(ChainId, Principal)> {
+        self.minter_id.clone().into_iter().collect()
+    }
+
     pub fn cycles_management(&self) -> &CyclesManagement {
         &self.cycles_management
     }
@@ -829,10 +833,10 @@ impl InstalledNativeLedgerSuite {
         }
         let ledger = self.ledger;
         let ledger_wasm_hash: Hash<WASM_HASH_LENGTH> = Hash::from_str(&self.ledger_wasm_hash)
-            .map_err(|e| InvalidNativeInstalledCanistersError::WasmHashError)?;
+            .map_err(|_e| InvalidNativeInstalledCanistersError::WasmHashError)?;
         let index: Principal = self.index;
         let index_wasm_hash: Hash<WASM_HASH_LENGTH> = Hash::from_str(&self.index_wasm_hash)
-            .map_err(|e| InvalidNativeInstalledCanistersError::WasmHashError)?;
+            .map_err(|_e| InvalidNativeInstalledCanistersError::WasmHashError)?;
         if ledger_wasm_hash == index_wasm_hash {
             return Err(InvalidNativeInstalledCanistersError::WasmHashError);
         }

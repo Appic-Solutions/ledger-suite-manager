@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
-use super::{Task, TaskError};
+use super::TaskError;
 
 const THREE_GIGA_BYTES: u64 = 3_221_225_472;
 

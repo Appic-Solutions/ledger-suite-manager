@@ -1,29 +1,29 @@
-use std::str::FromStr;
-
-use ic_canister_log::log;
+use candid::Nat;
+use ic_cdk::api::management_canister::main::{
+    canister_status, CanisterIdRecord, CanisterStatusResponse,
+};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
-use ic_ethereum_types::Address;
-use icrc_twin_ledgers_manager::cmc_client::{self, CmcRunTime, CyclesConvertor};
+use icrc_twin_ledgers_manager::cmc_client::{CmcRunTime, CyclesConvertor};
 use icrc_twin_ledgers_manager::endpoints::{
-    InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
+    Erc20Contract, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
+    LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters,
 };
 use icrc_twin_ledgers_manager::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use icrc_twin_ledgers_manager::ledger_suite_manager::{
     proccess_convert_icp_to_cycles, process_discover_archives, process_install_ledger_suites,
     process_maybe_topup,
 };
-use icrc_twin_ledgers_manager::logs::{DEBUG, ERROR, INFO};
 
-use icrc_twin_ledgers_manager::state::{mutate_state, read_state, ChainId, Erc20Token};
+use icrc_twin_ledgers_manager::state::{mutate_state, read_state, Canisters, Erc20Token};
 use icrc_twin_ledgers_manager::storage::read_wasm_store;
 use icrc_twin_ledgers_manager::INSTALL_LEDGER_SUITE_INTERVAL;
 use icrc_twin_ledgers_manager::{
     endpoints::{AddErc20Arg, AddErc20Error},
-    tester::{checker, tester},
+    tester::tester,
     DISCOVER_ARCHIVES_INTERVAL, ICP_TO_CYCLES_CONVERTION_INTERVAL, MAYBE_TOP_OP_INTERVAL,
 };
 
-use num_traits::{CheckedSub, ToPrimitive};
+use num_traits::ToPrimitive;
 
 fn main() {
     tester();
@@ -52,6 +52,57 @@ fn setup_timers() {
 }
 
 #[update]
+async fn get_canister_status() -> CanisterStatusResponse {
+    canister_status(CanisterIdRecord {
+        canister_id: ic_cdk::id(),
+    })
+    .await
+    .expect("failed to fetch canister status")
+    .0
+}
+
+#[query]
+fn twin_canister_ids_by_contract(contract: Erc20Contract) -> Option<ManagedCanisterIds> {
+    let token_id = Erc20Token::try_from(contract)
+        .unwrap_or_else(|e| ic_cdk::trap(&format!("Invalid ERC-20 contract: {:?}", e)));
+    read_state(|s| s.managed_canisters(&token_id).cloned()).map(ManagedCanisterIds::from)
+}
+
+#[query]
+fn all_twins_canister_ids() -> Vec<ManagedCanisters> {
+    read_state(|s| {
+        let managed_cansiters: Vec<ManagedCanisters> = s
+            .all_managed_canisters_iter()
+            .map(|(token_id, canisters)| (token_id, canisters.clone()).into())
+            .collect();
+        return managed_cansiters;
+    })
+}
+
+#[query]
+fn get_orchestrator_info() -> LedgerManagerInfo {
+    read_state(|s| {
+        let erc20_canisters: Vec<(Erc20Token, &Canisters)> =
+            s.all_managed_canisters_iter().collect();
+
+        let all_minter_ids = s.all_minter_ids();
+        LedgerManagerInfo {
+            managed_canisters: erc20_canisters
+                .into_iter()
+                .map(|(token_id, canisters)| (token_id, canisters.clone()).into())
+                .collect(),
+            cycles_management: s.cycles_management().clone(),
+            more_controller_ids: s.more_controller_ids().to_vec(),
+            minter_ids: all_minter_ids
+                .into_iter()
+                .map(|(chain_id, minter_id)| (Nat::from(chain_id.as_ref().clone()), minter_id))
+                .collect(),
+            ledger_suite_version: s.ledger_suite_version().cloned().map(|v| v.into()),
+        }
+    })
+}
+
+#[update]
 fn add_native_ls(
     native_ls: InstalledNativeLedgerSuite,
 ) -> Result<(), InvalidNativeInstalledCanistersError> {
@@ -62,11 +113,11 @@ fn add_native_ls(
 
     let erc20_token = validate_native_ls.get_erc20_token();
 
-    let minter_id = read_state(|s| {
-        let minter_id = s.minter_id(chain_id);
+    let _minter_id = read_state(|s| {
+        let minter_id = s.minter_id(erc20_token.chain_id());
         match minter_id {
             Some(minter) => {
-                if (minter.clone() != caller) {
+                if minter.clone() != caller {
                     return Err(InvalidNativeInstalledCanistersError::NotAllowed);
                 }
                 return Ok(minter.clone());
@@ -83,6 +134,8 @@ fn add_native_ls(
 
 #[update]
 async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
+    let caller = ic_cdk::caller();
+
     // Validate args correctness
     let install_ledger_suite_args = read_state(|s| {
         read_wasm_store(|w| InstallLedgerSuiteArgs::validate_add_erc20(s, w, erc20_args.clone()))
@@ -104,7 +157,7 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
     let deposit_result = cycles_client
         .deposit_icp(
             twin_creation_fee_amount_in_icp.try_into().unwrap(),
-            ic_cdk::caller(),
+            caller,
             None,
         )
         .await?;
@@ -126,7 +179,7 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
                         .to_u64()
                         .expect("Nat to u64 should not fail"),
                     twin_creation_fee_amount_in_icp.checked_sub(10_000).unwrap(),
-                    ic_cdk::caller(),
+                    caller,
                 );
 
                 // Add the leadger suit creation to the queue
