@@ -52,14 +52,28 @@ fn setup_timers() {
 }
 
 #[update]
-fn add_new_native_ls(
+fn add_native_ls(
     native_ls: InstalledNativeLedgerSuite,
 ) -> Result<(), InvalidNativeInstalledCanistersError> {
-    // Validate args corectness
+    let caller = ic_cdk::caller();
 
+    // Validate args corectness
     let validate_native_ls = read_state(|s| native_ls.validate(s))?;
 
     let erc20_token = validate_native_ls.get_erc20_token();
+
+    let minter_id = read_state(|s| {
+        let minter_id = s.minter_id(chain_id);
+        match minter_id {
+            Some(minter) => {
+                if (minter.clone() != caller) {
+                    return Err(InvalidNativeInstalledCanistersError::NotAllowed);
+                }
+                return Ok(minter.clone());
+            }
+            None => return Err(InvalidNativeInstalledCanistersError::NotAllowed),
+        };
+    })?;
 
     // Add the native ldger suite to the state
     mutate_state(|s| s.record_new_native_erc20_token(erc20_token, validate_native_ls));
@@ -68,7 +82,7 @@ fn add_new_native_ls(
 }
 
 #[update]
-async fn add_new_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
+async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
     // Validate args correctness
     let install_ledger_suite_args = read_state(|s| {
         read_wasm_store(|w| InstallLedgerSuiteArgs::validate_add_erc20(s, w, erc20_args.clone()))

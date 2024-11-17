@@ -162,4 +162,6 @@ pub enum InvalidNativeInstalledCanistersError {
     WasmHashError,
     TokenAlreadyManaged,
     AlreadyManagedPrincipals,
+    // Only minter casniters are allowed to add native ledger suites
+    NotAllowed,
 }
