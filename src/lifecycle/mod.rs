@@ -1,6 +1,6 @@
 use crate::endpoints::{InitArg, UpgradeArg};
 use crate::logs::INFO;
-use crate::state::{init_state, mutate_state, read_state, LedgerSuiteCreationFee, State};
+use crate::state::{init_state, mutate_state, read_state, ChainId, LedgerSuiteCreationFee, State};
 use crate::storage::{mutate_wasm_store, read_wasm_store, record_icrc1_ledger_suite_wasms};
 use ic_canister_log::log;
 use std::str::FromStr;
@@ -36,6 +36,14 @@ pub fn post_upgrade(upgrade_arg: Option<UpgradeArg>) {
         }
         if let Some(update) = arg.twin_ls_creation_fees {
             mutate_state(|s| s.upate_minimum_tokens_for_new_ledger_suite(update.into()));
+        }
+
+        if let Some(update) = arg.new_minter_ids {
+            let remapped_minter_ids = update
+                .into_iter()
+                .map(|(chain_id, principal_id)| (ChainId::from(chain_id), principal_id))
+                .collect();
+            mutate_state(|s| s.record_new_minter_ids(remapped_minter_ids));
         }
 
         // TODO: Mechanism for upgrading ledger suite wasm hash.

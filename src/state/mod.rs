@@ -560,6 +560,11 @@ impl State {
         self.minter_id.clone().into_iter().collect()
     }
 
+    pub fn record_new_minter_ids(&mut self, new_minters: Vec<(ChainId, Principal)>) {
+        self.minter_id
+            .append(&mut BTreeMap::from_iter(new_minters.into_iter()));
+    }
+
     pub fn cycles_management(&self) -> &CyclesManagement {
         &self.cycles_management
     }

@@ -39,6 +39,7 @@ pub struct UpgradeArg {
     pub archive_compressed_wasm_hash: Option<String>,
     pub cycles_management: Option<UpdateCyclesManagement>,
     pub twin_ls_creation_fees: Option<UpdateLedgerSuiteCreationFee>,
+    pub new_minter_ids: Option<Vec<(ChainId, Principal)>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, CandidType, Deserialize)]
