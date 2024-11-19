@@ -1,3 +1,9 @@
+#[cfg(test)]
+pub mod test_fixtures;
+
+#[cfg(test)]
+mod tests;
+
 use crate::state::{
     Archive, ArchiveWasm, Index, IndexWasm, Ledger, LedgerSuiteVersion, LedgerWasm, Wasm, WasmHash,
 };

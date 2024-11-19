@@ -1,3 +1,9 @@
+#[cfg(test)]
+mod test_fixtures;
+
+#[cfg(test)]
+mod tests;
+
 use candid::{Nat, Principal};
 use ic_cdk::trap;
 use ic_ethereum_types::Address;
@@ -620,13 +626,6 @@ impl State {
         self.managed_canisters(token)
             .and_then(|c| c.get().map(|c: &Canister<T>| &c.status))
     }
-
-    // /// Record other canisters managed by the orchestrator.
-    // pub fn record_manage_other_canisters(&mut self, other_canisters: InstalledLedgerSuite) {
-    //     let token_id = TokenId::from(other_canisters.token_symbol.clone());
-    //     self.managed_canisters
-    //         .insert_once(token_id, Canisters::from(other_canisters));
-    // }
 
     pub fn record_new_native_erc20_token(
         &mut self,

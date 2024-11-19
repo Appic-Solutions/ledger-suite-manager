@@ -1,3 +1,6 @@
+#[cfg(test)]
+pub(crate) mod test_fixtures;
+
 pub mod discover_archives;
 pub mod icp_cycles_convertor;
 pub mod install_ls;
