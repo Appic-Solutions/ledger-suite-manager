@@ -5,8 +5,8 @@ use ic_cdk::api::management_canister::main::{
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 use icrc_twin_ledgers_manager::cmc_client::{CmcRunTime, CyclesConvertor};
 use icrc_twin_ledgers_manager::endpoints::{
-    Erc20Contract, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
-    LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters,
+    Erc20Contract, InitArg, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
+    LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters, UpgradeArg,
 };
 use icrc_twin_ledgers_manager::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use icrc_twin_ledgers_manager::ledger_suite_manager::{
@@ -14,6 +14,7 @@ use icrc_twin_ledgers_manager::ledger_suite_manager::{
     process_maybe_topup,
 };
 
+use icrc_twin_ledgers_manager::lifecycle::{self};
 use icrc_twin_ledgers_manager::state::{mutate_state, read_state, Canisters, Erc20Token};
 use icrc_twin_ledgers_manager::storage::read_wasm_store;
 use icrc_twin_ledgers_manager::INSTALL_LEDGER_SUITE_INTERVAL;
@@ -29,6 +30,26 @@ fn main() {
     tester();
 }
 
+#[init]
+fn init(arg: InitArg) {
+    // Initilize casniter state and wasm_store.
+    lifecycle::init(arg);
+    // Set up timers
+    setup_timers();
+}
+
+#[post_upgrade]
+fn post_upgrade(upgrade_args: Option<UpgradeArg>) {
+    // Upgrade necessary parts if needed
+
+    match upgrade_args {
+        Some(upgrade_arg) => lifecycle::post_upgrade(Some(upgrade_arg)),
+        None => lifecycle::post_upgrade(None),
+    }
+
+    // Set up timers
+    setup_timers();
+}
 fn setup_timers() {
     // Check ICP Balance and convert to Cycles
     ic_cdk_timers::set_timer_interval(ICP_TO_CYCLES_CONVERTION_INTERVAL, || {
@@ -85,6 +106,12 @@ fn get_orchestrator_info() -> LedgerManagerInfo {
         let erc20_canisters: Vec<(Erc20Token, &Canisters)> =
             s.all_managed_canisters_iter().collect();
 
+        // Check if paying by appic tokens is activated or not
+        let ls_creation_appic_fee = match s.minimum_tokens_for_new_ledger_suite().appic {
+            Some(fee) => Some(Nat::from(fee)),
+            None => None,
+        };
+
         let all_minter_ids = s.all_minter_ids();
         LedgerManagerInfo {
             managed_canisters: erc20_canisters
@@ -98,6 +125,10 @@ fn get_orchestrator_info() -> LedgerManagerInfo {
                 .map(|(chain_id, minter_id)| (Nat::from(chain_id.as_ref().clone()), minter_id))
                 .collect(),
             ledger_suite_version: s.ledger_suite_version().cloned().map(|v| v.into()),
+            ls_creation_icp_fee: Nat::from(s.minimum_tokens_for_new_ledger_suite().icp),
+
+            // The feature might not be activate.
+            ls_creation_appic_fee,
         }
     })
 }
@@ -143,14 +174,7 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
 
     // Get amount of icps required for ledger suite creation
     let twin_creation_fee_amount_in_icp =
-        match read_state(|s| s.minimum_tokens_for_new_ledger_suite()) {
-            Some(fees) => fees.icp.clone(),
-            None => {
-                return Err(AddErc20Error::InternalError(
-                    "Failed to get twin token creation fees".to_string(),
-                ))
-            }
-        };
+        read_state(|s| s.minimum_tokens_for_new_ledger_suite().icp);
     // Deposit Icp or appic tokens as fee
     let cycles_client = CyclesConvertor {};
 

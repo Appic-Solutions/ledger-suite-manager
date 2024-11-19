@@ -106,21 +106,6 @@ impl Storable for StoredWasm {
     const BOUND: Bound = Bound::Unbounded;
 }
 
-// impl Storable for Task {
-//     fn to_bytes(&self) -> Cow<[u8]> {
-//         let mut buf = vec![];
-//         ciborium::ser::into_writer(&self, &mut buf).expect("failed to encode a Task to bytes");
-//         Cow::Owned(buf)
-//     }
-
-//     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-//         ciborium::de::from_reader(bytes.as_ref())
-//             .unwrap_or_else(|e| panic!("failed to decode Task bytes {}: {e}", hex::encode(bytes)))
-//     }
-
-//     const BOUND: Bound = Bound::Unbounded;
-// }
-
 #[derive(Clone, PartialEq, Debug)]
 pub enum WasmStoreError {
     WasmMismatch {

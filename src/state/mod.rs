@@ -1,4 +1,4 @@
-use candid::Principal;
+use candid::{Nat, Principal};
 use ic_cdk::trap;
 use ic_ethereum_types::Address;
 use ic_stable_structures::{storable::Bound, Cell, Storable};
@@ -14,8 +14,8 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 use crate::endpoints::{
-    CyclesManagement, Erc20Contract, InstalledNativeLedgerSuite,
-    InvalidNativeInstalledCanistersError,
+    CyclesManagement, Erc20Contract, InitArg, InstalledNativeLedgerSuite,
+    InvalidNativeInstalledCanistersError, UpdateLedgerSuiteCreationFee,
 };
 use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use crate::ledger_suite_manager::PeriodicTasksTypes;
@@ -218,6 +218,11 @@ impl Erc20Token {
 
     pub fn address(&self) -> &Address {
         &self.1
+    }
+}
+impl From<Nat> for ChainId {
+    fn from(value: Nat) -> Self {
+        Self(value.0.to_u64().unwrap())
     }
 }
 
@@ -477,7 +482,24 @@ fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> T {
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct LedgerSuiteCreationFee {
     pub icp: u128,
-    pub appic: u128,
+    pub appic: Option<u128>,
+}
+
+impl LedgerSuiteCreationFee {
+    pub fn new(icp: u128, appic: Option<u128>) -> Self {
+        Self { icp, appic }
+    }
+}
+
+impl From<UpdateLedgerSuiteCreationFee> for LedgerSuiteCreationFee {
+    fn from(value: UpdateLedgerSuiteCreationFee) -> Self {
+        let icp_to_u128 = value.icp.0.to_u128().unwrap();
+        let appic_to_u128 = match value.appic {
+            Some(appic_nat) => Some(appic_nat.0.to_u128().unwrap()),
+            None => None,
+        };
+        Self::new(icp_to_u128, appic_to_u128)
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
@@ -513,7 +535,7 @@ pub struct State {
     // Collected icp or appic token in the beginning for ledger suite creation
     collected_icp_token: u128,
     collected_appic_token: u128,
-    minimum_tokens_for_new_ledger_suite: Option<LedgerSuiteCreationFee>,
+    minimum_tokens_for_new_ledger_suite: LedgerSuiteCreationFee,
 
     // Received deposits for twin ledger suite creation
     received_deposits: Vec<ReceivedDeposit>,
@@ -561,8 +583,15 @@ impl State {
         self.ledger_suite_version.as_ref()
     }
 
-    pub fn minimum_tokens_for_new_ledger_suite(&self) -> Option<LedgerSuiteCreationFee> {
+    pub fn minimum_tokens_for_new_ledger_suite(&self) -> LedgerSuiteCreationFee {
         self.minimum_tokens_for_new_ledger_suite.clone()
+    }
+
+    pub fn upate_minimum_tokens_for_new_ledger_suite(
+        &mut self,
+        new_ls_fees: LedgerSuiteCreationFee,
+    ) {
+        self.minimum_tokens_for_new_ledger_suite = new_ls_fees
     }
 
     /// Initializes the ledger suite version if it is not already set.
@@ -703,16 +732,82 @@ impl State {
             .insert(erc20_token, install_args);
     }
 
-    // pub fn validate_config(&self) -> Result<(), InvalidStateError> {
-    //     const MAX_ADDITIONAL_CONTROLLERS: usize = 9;
-    //     if self.more_controller_ids.len() > MAX_ADDITIONAL_CONTROLLERS {
-    //         return Err(InvalidStateError::TooManyAdditionalControllers {
-    //             max: MAX_ADDITIONAL_CONTROLLERS,
-    //             actual: self.more_controller_ids.len(),
-    //         });
-    //     }
-    //     Ok(())
-    // }
+    pub fn validate_config(&self) -> Result<(), InvalidStateError> {
+        const MAX_ADDITIONAL_CONTROLLERS: usize = 9;
+        if self.more_controller_ids.len() > MAX_ADDITIONAL_CONTROLLERS {
+            return Err(InvalidStateError::TooManyAdditionalControllers {
+                max: MAX_ADDITIONAL_CONTROLLERS,
+                actual: self.more_controller_ids.len(),
+            });
+        }
+        Ok(())
+    }
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum InvalidStateError {
+    TooManyAdditionalControllers { max: usize, actual: usize },
+}
+
+impl TryFrom<InitArg> for State {
+    type Error = InvalidStateError;
+    fn try_from(
+        InitArg {
+            more_controller_ids,
+            minter_ids,
+            cycles_management,
+            twin_ls_creation_fee_appic_token,
+            twin_ls_creation_fee_icp_token,
+        }: InitArg,
+    ) -> Result<Self, Self::Error> {
+        // Parse chain ids from Nat format into ChainId types
+        let minter_ids_vec: Vec<(ChainId, Principal)> = minter_ids
+            .into_iter()
+            .map(|(chain_id, minter_principal)| (ChainId::from(chain_id), minter_principal))
+            .collect();
+
+        // Initilize BTreeMap with the parsed vector of minter ids
+        let minter_ids_map: BTreeMap<ChainId, Principal> =
+            BTreeMap::from_iter(minter_ids_vec.into_iter());
+
+        // Convert Nat to u128 for icp
+        let icp_ls_creation_fee = twin_ls_creation_fee_icp_token
+            .0
+            .to_u128()
+            .expect("Should not fail converting Nat into u128");
+
+        // Convert Nat to u128 for appic
+        let appic_ls_creation_fee = match twin_ls_creation_fee_appic_token {
+            Some(appic_nat) => Some(
+                appic_nat
+                    .0
+                    .to_u128()
+                    .expect("Should not fail converting Nat into u128"),
+            ),
+            None => None,
+        };
+
+        // Produce state
+        let state = Self {
+            managed_canisters: Default::default(),
+            cycles_management: cycles_management.unwrap_or_default(),
+            more_controller_ids,
+            minter_id: minter_ids_map,
+            ledger_suite_version: Default::default(),
+            active_tasks: Default::default(),
+            twin_ledger_suites_to_be_installed: Default::default(),
+            failed_ledger_suite_installs: Default::default(),
+            collected_icp_token: 0,
+            collected_appic_token: 0,
+            minimum_tokens_for_new_ledger_suite: LedgerSuiteCreationFee::new(
+                icp_ls_creation_fee,
+                appic_ls_creation_fee,
+            ),
+            received_deposits: Default::default(),
+        };
+        state.validate_config()?;
+        Ok(state)
+    }
 }
 
 pub fn read_state<R>(f: impl FnOnce(&State) -> R) -> R {

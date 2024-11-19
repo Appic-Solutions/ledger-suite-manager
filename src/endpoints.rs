@@ -11,9 +11,35 @@ use crate::{
     management::CallError,
     state::{
         Canister, Canisters, CanistersMetadata, Erc20Token, Hash, IndexCanister, LedgerCanister,
-        ManagedCanisterStatus as StateManagedCasniter,
+        LedgerSuiteCreationFee, ManagedCanisterStatus as StateManagedCasniter,
     },
 };
+
+type ChainId = Nat;
+
+#[derive(Clone, Eq, PartialEq, Debug, Default, CandidType, Deserialize)]
+pub struct InitArg {
+    pub more_controller_ids: Vec<Principal>,
+    pub minter_ids: Vec<(ChainId, Principal)>,
+    pub cycles_management: Option<CyclesManagement>,
+    pub twin_ls_creation_fee_icp_token: Nat,
+    pub twin_ls_creation_fee_appic_token: Option<Nat>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, CandidType, Deserialize)]
+pub struct UpdateLedgerSuiteCreationFee {
+    pub icp: Nat,
+    pub appic: Option<Nat>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, CandidType, Deserialize)]
+pub struct UpgradeArg {
+    pub ledger_compressed_wasm_hash: Option<String>,
+    pub index_compressed_wasm_hash: Option<String>,
+    pub archive_compressed_wasm_hash: Option<String>,
+    pub cycles_management: Option<UpdateCyclesManagement>,
+    pub twin_ls_creation_fees: Option<UpdateLedgerSuiteCreationFee>,
+}
 
 #[derive(Clone, Eq, PartialEq, Debug, CandidType, Deserialize)]
 pub struct AddErc20Arg {
@@ -60,7 +86,10 @@ impl From<InvalidAddErc20ArgError> for AddErc20Error {
 
 impl From<CallError> for AddErc20Error {
     fn from(value: CallError) -> Self {
-        Self::InternalError("Internal Error, please try again later".to_string())
+        Self::InternalError(format!(
+            "Internal Error: {}, please try again later",
+            value.reason().to_string()
+        ))
     }
 }
 
@@ -119,6 +148,33 @@ impl CyclesManagement {
     /// The chosen amount must ensure that the ledger should be able to spawn an archive canister at any time.
     pub fn minimum_monitored_canister_cycles(&self) -> Nat {
         self.cycles_for_archive_creation.clone() + 2_u8 * self.cycles_top_up_increment.clone()
+    }
+}
+
+#[derive(
+    Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Default, CandidType, Deserialize, serde::Serialize,
+)]
+pub struct UpdateCyclesManagement {
+    pub cycles_for_ledger_creation: Option<Nat>,
+    pub cycles_for_archive_creation: Option<Nat>,
+    pub cycles_for_index_creation: Option<Nat>,
+    pub cycles_top_up_increment: Option<Nat>,
+}
+
+impl UpdateCyclesManagement {
+    pub fn apply(self, old: &mut CyclesManagement) {
+        if let Some(cycles_for_ledger_creation) = self.cycles_for_ledger_creation {
+            old.cycles_for_ledger_creation = cycles_for_ledger_creation;
+        }
+        if let Some(cycles_for_archive_creation) = self.cycles_for_archive_creation {
+            old.cycles_for_archive_creation = cycles_for_archive_creation;
+        }
+        if let Some(cycles_for_index_creation) = self.cycles_for_index_creation {
+            old.cycles_for_index_creation = cycles_for_index_creation;
+        }
+        if let Some(cycles_top_up_increment) = self.cycles_top_up_increment {
+            old.cycles_top_up_increment = cycles_top_up_increment;
+        }
     }
 }
 
@@ -276,8 +332,6 @@ impl From<crate::state::LedgerSuiteVersion> for LedgerSuiteVersion {
     }
 }
 
-type ChainId = Nat;
-
 #[derive(Clone, Eq, PartialEq, Debug, CandidType, Deserialize)]
 pub struct LedgerManagerInfo {
     pub managed_canisters: Vec<ManagedCanisters>,
@@ -285,4 +339,6 @@ pub struct LedgerManagerInfo {
     pub more_controller_ids: Vec<Principal>,
     pub minter_ids: Vec<(ChainId, Principal)>,
     pub ledger_suite_version: Option<LedgerSuiteVersion>,
+    pub ls_creation_icp_fee: Nat,
+    pub ls_creation_appic_fee: Option<Nat>,
 }
