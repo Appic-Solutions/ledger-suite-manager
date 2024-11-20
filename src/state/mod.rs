@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod test_fixtures;
+pub(crate) mod test_fixtures;
 
 #[cfg(test)]
 mod tests;
@@ -299,7 +299,6 @@ pub struct Canisters {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct CanistersMetadata {
-    #[serde(rename = "erc20_token_symbol")]
     pub token_symbol: String,
 }
 
@@ -545,6 +544,9 @@ pub struct State {
 
     // Received deposits for twin ledger suite creation
     received_deposits: Vec<ReceivedDeposit>,
+
+    // Minters to be notified of new erc20
+    pub notify_add_erc20_list: BTreeMap<Erc20Token, Principal>,
 }
 
 impl State {
@@ -563,6 +565,19 @@ impl State {
     pub fn record_new_minter_ids(&mut self, new_minters: Vec<(ChainId, Principal)>) {
         self.minter_id
             .append(&mut BTreeMap::from_iter(new_minters.into_iter()));
+    }
+
+    pub fn record_new_erc20_minter_notification(
+        &mut self,
+        token: &Erc20Token,
+        minter_id: &Principal,
+    ) {
+        self.notify_add_erc20_list
+            .insert(token.clone(), minter_id.clone());
+    }
+
+    pub fn remove_erc20_from_minter_notification_list(&mut self, token: &Erc20Token) {
+        self.notify_add_erc20_list.remove(token);
     }
 
     pub fn cycles_management(&self) -> &CyclesManagement {
@@ -808,6 +823,7 @@ impl TryFrom<InitArg> for State {
                 appic_ls_creation_fee,
             ),
             received_deposits: Default::default(),
+            notify_add_erc20_list: Default::default(),
         };
         state.validate_config()?;
         Ok(state)

@@ -1,6 +1,9 @@
 #[cfg(test)]
 pub(crate) mod test_fixtures;
 
+#[cfg(test)]
+pub mod tests;
+
 pub mod discover_archives;
 pub mod icp_cycles_convertor;
 pub mod install_ls;
@@ -14,7 +17,7 @@ use candid::Principal;
 use discover_archives::{discover_archives, select_all, DiscoverArchivesError};
 use futures::task;
 use ic_canister_log::log;
-use install_ls::{install_ledger_suite, InstallLedgerSuiteArgs};
+use install_ls::{install_ledger_suite, notify_erc20_added, InstallLedgerSuiteArgs};
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -39,6 +42,7 @@ pub enum PeriodicTasksTypes {
     MaybeTopUp,
     DiscoverArchives,
     ConvertIcpToCycles,
+    NotifyErc20Added,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -48,10 +52,7 @@ pub enum Task {
     // UpgradeLedgerSuite(UpgradeLedgerSuite),
     MaybeTopUp,
     DiscoverArchives,
-    NotifyErc20Added {
-        erc20_token: Erc20Token,
-        minter_id: Principal,
-    },
+    NotifyErc20Added,
     ConvertIcpToCycles,
 }
 
@@ -148,7 +149,7 @@ pub async fn process_install_ledger_suites() {
                 true => {
                     log!(
                         INFO,
-                        "Failed to install for contract address: {}, chain_id:{:?}. Error is recoverable and will try again in the next iteration",
+                        "Failed to install for contract address: {}, chain_id:{:?}. Error is recoverable and will try again in the next iterationn",
                         contract.address(),
                         contract.chain_id()
                     );
@@ -190,7 +191,7 @@ pub async fn process_discover_archives() {
             true => {
                 log!(
                     INFO,
-                    "Failed to discover archives. Error is recoverable and will try again in the next iteratio");
+                    "Failed to discover archives. Error is recoverable and will try again in the next iteration");
             }
             false => {
                 log!(
@@ -200,6 +201,49 @@ pub async fn process_discover_archives() {
                 );
             }
         },
+    }
+}
+
+pub async fn process_notify_add_erc20() {
+    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::NotifyErc20Added) {
+        Ok(gaurd) => gaurd,
+        Err(e) => {
+            log!(
+                DEBUG,
+                "Failed retrieving timer guard to run Notify minter process: {e:?}",
+            );
+            return;
+        }
+    };
+
+    let runtime = IcCanisterRuntime {};
+
+    let erc20_tokens_to_be_added_to_minters = read_state(|s| s.notify_add_erc20_list.clone());
+
+    for (token, minter_id) in erc20_tokens_to_be_added_to_minters {
+        let notify_minters_result: Result<(), TaskError> =
+            notify_erc20_added(&token, &minter_id, &runtime).await;
+
+        match notify_minters_result {
+            Ok(_) => {
+                mutate_state(|s| s.remove_erc20_from_minter_notification_list(&token));
+                log!(INFO, "Notified minter: {}, of token:{:?}", minter_id, token);
+            }
+            Err(task_error) => match task_error.is_recoverable() {
+                true => {
+                    log!(
+                    INFO,
+                    "Failed to Notify minter. Error is recoverable and will try again in the next iterationn. {:?}",task_error);
+                }
+                false => {
+                    log!(
+                        DEBUG,
+                        "Failed to Notify minter, Error is not recoverable. error: {:?}",
+                        task_error
+                    );
+                }
+            },
+        }
     }
 }
 
@@ -225,7 +269,7 @@ pub async fn process_maybe_topup() {
             true => {
                 log!(
                     INFO,
-                    "Failed to run maybe_top_up process. Error is recoverable and will try again in the next iteratio");
+                    "Failed to run maybe_top_up process. Error is recoverable and will try again in the next iteration");
             }
             false => {
                 log!(

@@ -1,6 +1,5 @@
 use candid::{CandidType, Deserialize, Nat, Principal};
 use icrc_ledger_types::icrc2::transfer_from::TransferFromError;
-use serde::Serialize;
 use std::{
     fmt::{Display, Formatter},
     str::FromStr,
@@ -11,7 +10,7 @@ use crate::{
     management::CallError,
     state::{
         Canister, Canisters, CanistersMetadata, Erc20Token, Hash, IndexCanister, LedgerCanister,
-        LedgerSuiteCreationFee, ManagedCanisterStatus as StateManagedCasniter,
+        ManagedCanisterStatus as StateManagedCasniter,
     },
 };
 

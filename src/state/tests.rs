@@ -155,12 +155,13 @@ mod manage_canister {
 
 mod installed_ledger_suite {
     use crate::endpoints::InstalledNativeLedgerSuite as CandidInstalledNativeLedgerSuite;
-    use crate::ledger_suite_manager::test_fixtures::{usdc, usdc_metadata, usdt, usdt_metadata};
+    use crate::ledger_suite_manager::test_fixtures::{
+        usdc, usdc_matic, usdc_matic_ledger_suite, usdc_metadata, usdt, usdt_metadata,
+    };
     use crate::state::test_fixtures::new_state;
     use crate::state::{Index, InvalidNativeInstalledCanistersError, Ledger, State};
     use assert_matches::assert_matches;
     use candid::{Nat, Principal};
-    use maplit::btreeset;
 
     #[test]
     fn should_fail_when_same_wasm_hash() {
@@ -177,7 +178,7 @@ mod installed_ledger_suite {
     }
 
     #[test]
-    fn should_fail_when_token_symbol_already_managed() {
+    fn should_fail_when_token_already_managed() {
         let mut state = new_state();
         let iceth = iceth_installed_canisters();
         state.record_new_native_erc20_token(iceth.get_erc20_token(), iceth.clone());
@@ -252,6 +253,30 @@ mod installed_ledger_suite {
         );
     }
 
+    #[test]
+    fn should_validate_native_same_contract_addresses_but_different_chain_id() {
+        let mut state = new_state();
+
+        let iceth = iceth_installed_canisters();
+        let icmatic = icmatic_installed_canisters();
+        state.record_new_native_erc20_token(iceth.get_erc20_token(), iceth.clone());
+
+        let result = CandidInstalledNativeLedgerSuite::validate(icmatic.clone(), &state).unwrap();
+
+        assert_eq!(result, icmatic)
+    }
+
+    #[test]
+    fn should_validate_same_erc20_contract_addresses_but_different_chain_id() {
+        let mut state = new_state();
+        add_usdc_ledger_suite(&mut state);
+
+        if let None = state.managed_canisters(&usdc_matic()) {
+            assert!(true);
+        } else {
+            assert!(false)
+        }
+    }
     fn validated_iceth_canisters() -> CandidInstalledNativeLedgerSuite {
         let iceth = iceth_installed_canisters();
         CandidInstalledNativeLedgerSuite {
@@ -278,6 +303,22 @@ mod installed_ledger_suite {
             index_wasm_hash: "eb3096906bf9a43996d2ca9ca9bfec333a402612f132876c8ed1b01b9844112a"
                 .to_string(),
             chain_id: Nat::from(1_u64),
+        }
+    }
+
+    fn icmatic_installed_canisters() -> CandidInstalledNativeLedgerSuite {
+        CandidInstalledNativeLedgerSuite {
+            symbol: "icMATIC".to_string(),
+            ledger: "ryjl3-tyaaa-aaaaa-aaaba-cai".parse().unwrap(),
+
+            index: "r7inp-6aaaa-aaaaa-aaabq-cai".parse().unwrap(),
+
+            archives: vec!["renrk-eyaaa-aaaaa-aaada-cai".parse().unwrap()],
+            ledger_wasm_hash: "8457289d3b3179aa83977ea21bfa2fc85e402e1f64101ecb56a4b963ed33a1e6"
+                .to_string(),
+            index_wasm_hash: "eb3096906bf9a43996d2ca9ca9bfec333a402612f132876c8ed1b01b9844112a"
+                .to_string(),
+            chain_id: Nat::from(137_u64),
         }
     }
 
@@ -375,7 +416,7 @@ mod schema_upgrades {
     use candid::{Deserialize, Principal};
     use proptest::proptest;
     use serde::Serialize;
-    use std::collections::{BTreeMap, BTreeSet, HashSet};
+    use std::collections::{BTreeMap, HashSet};
 
     #[derive(Clone, PartialEq, Debug, Default, Deserialize, Serialize)]
     pub struct ManagedCanistersPreviousVersion {
@@ -442,6 +483,7 @@ mod schema_upgrades {
         collected_appic_token: u128,
         minimum_tokens_for_new_ledger_suite: LedgerSuiteCreationFee,
         received_deposits: Vec<ReceivedDeposit>,
+        notify_add_erc20_list: BTreeMap<Erc20Token, Principal>,
     }
 
     impl From<State> for StatePreviousVersion {
@@ -459,6 +501,7 @@ mod schema_upgrades {
                 collected_appic_token,
                 minimum_tokens_for_new_ledger_suite,
                 received_deposits,
+                notify_add_erc20_list,
             }: State,
         ) -> Self {
             Self {
@@ -474,6 +517,7 @@ mod schema_upgrades {
                 collected_appic_token,
                 minimum_tokens_for_new_ledger_suite,
                 received_deposits,
+                notify_add_erc20_list,
             }
         }
     }

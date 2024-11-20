@@ -11,18 +11,18 @@ use icrc_twin_ledgers_manager::endpoints::{
 use icrc_twin_ledgers_manager::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use icrc_twin_ledgers_manager::ledger_suite_manager::{
     proccess_convert_icp_to_cycles, process_discover_archives, process_install_ledger_suites,
-    process_maybe_topup,
+    process_maybe_topup, process_notify_add_erc20,
 };
 
 use icrc_twin_ledgers_manager::lifecycle::{self};
 use icrc_twin_ledgers_manager::state::{mutate_state, read_state, Canisters, Erc20Token};
 use icrc_twin_ledgers_manager::storage::read_wasm_store;
-use icrc_twin_ledgers_manager::INSTALL_LEDGER_SUITE_INTERVAL;
 use icrc_twin_ledgers_manager::{
     endpoints::{AddErc20Arg, AddErc20Error},
     tester::tester,
     DISCOVER_ARCHIVES_INTERVAL, ICP_TO_CYCLES_CONVERTION_INTERVAL, MAYBE_TOP_OP_INTERVAL,
 };
+use icrc_twin_ledgers_manager::{INSTALL_LEDGER_SUITE_INTERVAL, NOTIFY_ADD_ERC20_INTERVAL};
 
 use num_traits::ToPrimitive;
 
@@ -69,6 +69,11 @@ fn setup_timers() {
     // Check Canister balances and top-op in case of low in cycles
     ic_cdk_timers::set_timer_interval(INSTALL_LEDGER_SUITE_INTERVAL, || {
         ic_cdk::spawn(process_install_ledger_suites())
+    });
+
+    // Notify add Erc20 to minters
+    ic_cdk_timers::set_timer_interval(NOTIFY_ADD_ERC20_INTERVAL, || {
+        ic_cdk::spawn(process_notify_add_erc20())
     });
 }
 

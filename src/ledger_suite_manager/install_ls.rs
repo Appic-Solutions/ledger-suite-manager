@@ -21,17 +21,17 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
-use super::TaskError;
+use super::{process_notify_add_erc20, TaskError};
 
 const THREE_GIGA_BYTES: u64 = 3_221_225_472;
 
 #[derive(Clone, Eq, PartialEq, Debug, Deserialize, Serialize)]
 pub struct InstallLedgerSuiteArgs {
     pub contract: Erc20Token,
-    minter_id: Principal,
-    ledger_init_arg: LedgerInitArg,
-    ledger_compressed_wasm_hash: WasmHash,
-    index_compressed_wasm_hash: WasmHash,
+    pub minter_id: Principal,
+    pub ledger_init_arg: LedgerInitArg,
+    pub ledger_compressed_wasm_hash: WasmHash,
+    pub index_compressed_wasm_hash: WasmHash,
 }
 impl PartialOrd for InstallLedgerSuiteArgs {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -159,18 +159,14 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
     )
     .await?;
 
-    // TODO: Schedule notyfing minter for new erc token
-    // read_state(|s| {
-    //     if let Some(&minter_id) = s.minter_id(args.contract.chain_id()) {
-    //         // schedule_now(
-    //         //     Task::NotifyErc20Added {
-    //         //         erc20_token,
-    //         //         minter_id,
-    //         //     },
-    //         //     runtime,
-    //         // );
-    //     }
-    // });
+    // Schedule notyfing minter for new erc token
+    mutate_state(|s| {
+        if let Some(&minter_id) = s.minter_id(args.contract.chain_id()) {
+            s.record_new_erc20_minter_notification(&args.contract, &minter_id);
+
+            ic_cdk::spawn(process_notify_add_erc20());
+        }
+    });
     Ok(())
 }
 
@@ -397,7 +393,7 @@ pub struct AddErc20Token {
     pub erc20_ledger_id: Principal,
 }
 
-async fn notify_erc20_added<R: CanisterRuntime>(
+pub async fn notify_erc20_added<R: CanisterRuntime>(
     token: &Erc20Token,
     minter_id: &Principal,
     runtime: &R,

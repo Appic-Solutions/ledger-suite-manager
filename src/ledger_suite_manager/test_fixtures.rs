@@ -30,6 +30,15 @@ pub fn usdc() -> Erc20Token {
     .unwrap()
 }
 
+pub fn usdc_matic() -> Erc20Token {
+    crate::endpoints::Erc20Contract {
+        chain_id: 137_u8.into(),
+        address: USDC_ADDRESS.to_string(),
+    }
+    .try_into()
+    .unwrap()
+}
+
 pub fn usdc_metadata() -> CanistersMetadata {
     CanistersMetadata {
         token_symbol: "icUSDC".to_string(),
@@ -51,6 +60,25 @@ pub fn usdc_ledger_suite() -> Canisters {
                 .unwrap(),
         })),
         archives: vec!["t4dy3-uiaaa-aaaar-qafua-cai".parse().unwrap()],
+        metadata: usdc_metadata(),
+    }
+}
+
+pub fn usdc_matic_ledger_suite() -> Canisters {
+    Canisters {
+        ledger: Some(LedgerCanister::new(ManagedCanisterStatus::Installed {
+            canister_id: "rdmx6-jaaaa-aaaaa-aaadq-cai".parse().unwrap(),
+            installed_wasm_hash: "8457289d3b3179aa83977ea21bfa2fc85e402e1f64101ecb56a4b963ed33a1e6"
+                .parse()
+                .unwrap(),
+        })),
+        index: Some(IndexCanister::new(ManagedCanisterStatus::Installed {
+            canister_id: "qoctq-giaaa-aaaaa-aaaea-cai".parse().unwrap(),
+            installed_wasm_hash: "eb3096906bf9a43996d2ca9ca9bfec333a402612f132876c8ed1b01b9844112a"
+                .parse()
+                .unwrap(),
+        })),
+        archives: vec!["qjdve-lqaaa-aaaaa-aaaeq-cai".parse().unwrap()],
         metadata: usdc_metadata(),
     }
 }
