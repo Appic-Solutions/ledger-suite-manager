@@ -266,9 +266,9 @@ impl CanisterRuntime for IcCanisterRuntime {
             sender_canister_version: None,
         };
 
-        self.call("install_code", 0, &install_code).await?;
+        let result: () = self.call("install_code", 0, &install_code).await?;
 
-        Ok(())
+        Ok(result)
     }
 
     async fn upgrade_canister(
@@ -286,9 +286,9 @@ impl CanisterRuntime for IcCanisterRuntime {
             sender_canister_version: None,
         };
 
-        self.call("install_code", 0, &install_code).await?;
+        let result: () = self.call("install_code", 0, &install_code).await?;
 
-        Ok(())
+        Ok(result)
     }
 
     async fn canister_cycles(&self, canister_id: Principal) -> Result<u128, CallError> {

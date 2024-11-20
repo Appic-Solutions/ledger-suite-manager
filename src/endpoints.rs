@@ -134,10 +134,10 @@ impl Default for CyclesManagement {
 }
 
 impl CyclesManagement {
-    /// Minimum amount of cycles the orchestrator should always have and some slack.
+    /// Minimum amount of cycles the Manager should always have and some slack.
     ///
     /// The chosen amount must ensure that the orchestrator is always able to spawn a new ICRC1 ledger suite.
-    pub fn minimum_orchestrator_cycles(&self) -> Nat {
+    pub fn minimum_manager_cycles(&self) -> Nat {
         self.cycles_for_ledger_creation.clone()
             + self.cycles_for_index_creation.clone()
             + 2_u8 * self.cycles_top_up_increment.clone()

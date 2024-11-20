@@ -13,25 +13,16 @@ use crate::ledger_suite_manager::icp_cycles_convertor::convert_icp_balance_to_cy
 // mod upgrade_ls;
 use crate::ledger_suite_manager::top_up::maybe_top_up;
 use crate::logs::{DEBUG, INFO};
-use candid::Principal;
 use discover_archives::{discover_archives, select_all, DiscoverArchivesError};
-use futures::task;
 use ic_canister_log::log;
 use install_ls::{install_ledger_suite, notify_erc20_added, InstallLedgerSuiteArgs};
 use serde::{Deserialize, Serialize};
-use std::cell::Cell;
-use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display};
-use std::str::FromStr;
-use std::time::Duration;
 // use upgrade_ls::{UpgradeLedgerSuite, UpgradeLedgerSuiteError};
 
 use crate::guard::TimerGuard;
 use crate::management::{CallError, IcCanisterRuntime, Reason};
-use crate::state::{
-    mutate_state, read_state, Canister, Erc20Token, ManagedCanisterStatus, WasmHash,
-};
+use crate::state::{mutate_state, read_state, Erc20Token, WasmHash};
 use crate::storage::WasmStoreError;
 
 // User for TimerGaurd to prevent Concurrency problems
@@ -56,7 +47,7 @@ pub enum Task {
     ConvertIcpToCycles,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TaskError {
     CanisterCreationError(CallError),
     InstallCodeError(CallError),

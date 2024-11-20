@@ -1,4 +1,4 @@
-use crate::state::{mutate_state, State};
+use crate::state::mutate_state;
 
 use crate::ledger_suite_manager::PeriodicTasksTypes;
 

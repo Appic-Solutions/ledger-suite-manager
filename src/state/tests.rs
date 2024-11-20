@@ -156,7 +156,7 @@ mod manage_canister {
 mod installed_ledger_suite {
     use crate::endpoints::InstalledNativeLedgerSuite as CandidInstalledNativeLedgerSuite;
     use crate::ledger_suite_manager::test_fixtures::{
-        usdc, usdc_matic, usdc_matic_ledger_suite, usdc_metadata, usdt, usdt_metadata,
+        usdc, usdc_matic, usdc_metadata, usdt, usdt_metadata,
     };
     use crate::state::test_fixtures::new_state;
     use crate::state::{Index, InvalidNativeInstalledCanistersError, Ledger, State};
@@ -405,8 +405,8 @@ mod validate_config {
 mod schema_upgrades {
     use crate::endpoints::CyclesManagement;
     use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
-    use crate::ledger_suite_manager::test_fixtures::{iceth_ledger_suite, usdc, usdc_ledger_suite};
-    use crate::ledger_suite_manager::{PeriodicTasksTypes, Task};
+    use crate::ledger_suite_manager::test_fixtures::{usdc, usdc_ledger_suite};
+    use crate::ledger_suite_manager::PeriodicTasksTypes;
     use crate::state::test_fixtures::arb_state;
     use crate::state::{
         decode, encode, Canisters, CanistersMetadata, ChainId, Erc20Token, IndexCanister,

@@ -1,7 +1,7 @@
 pub mod cmc_declrations;
 
 use async_trait::async_trait;
-use candid::{types::result, CandidType, Nat, Principal};
+use candid::{CandidType, Nat, Principal};
 use num_traits::ToPrimitive;
 
 use ic_canister_log::log;
@@ -12,8 +12,7 @@ use icrc_ledger_types::{
 
 use ic_ledger_types::{
     AccountIdentifier as IcpAccountIdentifier, Memo as IcpMemo, Subaccount as IcpSubaccount,
-    Tokens, TransferArgs as IcpTransferArgs, TransferError, TransferResult as IcpTransferResult,
-    DEFAULT_FEE,
+    Tokens, TransferArgs as IcpTransferArgs, TransferError, DEFAULT_FEE,
 };
 
 type BlockIndex = u64;

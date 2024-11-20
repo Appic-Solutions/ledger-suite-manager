@@ -1,22 +1,182 @@
-use crate::endpoints::{AddErc20Arg, CyclesManagement, InitArg, LedgerInitArg};
+use crate::endpoints::LedgerInitArg;
+use crate::ledger_suite_manager::install_ls::install_ledger_suite;
 use crate::ledger_suite_manager::test_fixtures::{usdc, usdc_metadata};
 use crate::ledger_suite_manager::tests::mock::MockCanisterRuntime;
-use crate::ledger_suite_manager::{InstallLedgerSuiteArgs, Task, TaskError};
-use crate::management::{CallError, CanisterRuntime, Reason};
+use crate::ledger_suite_manager::{InstallLedgerSuiteArgs, TaskError};
+use crate::management::{CallError, Reason};
 use crate::state::test_fixtures::new_state;
 use crate::state::{
     read_state, Canisters, IndexCanister, LedgerCanister, LedgerSuiteVersion,
-    ManagedCanisterStatus, State, WasmHash,
+    ManagedCanisterStatus, WasmHash,
 };
+
 use crate::storage::{mutate_wasm_store, record_icrc1_ledger_suite_wasms};
-use crate::storage::{ARCHIVE_NODE_BYTECODE, INDEX_BYTECODE, LEDGER_BYTECODE};
+use crate::storage::{INDEX_BYTECODE, LEDGER_BYTECODE};
 use candid::Principal;
 use icrc_ledger_types::icrc3::archive::{GetArchivesArgs, GetArchivesResult};
 
-const ORCHESTRATOR_PRINCIPAL: Principal = Principal::from_slice(&[0_u8; 29]);
+use super::install_ls::AddErc20Token;
+
+const LSM_PRINCIPAL: Principal = Principal::from_slice(&[0_u8; 29]);
 const LEDGER_PRINCIPAL: Principal = Principal::from_slice(&[1_u8; 29]);
 const INDEX_PRINCIPAL: Principal = Principal::from_slice(&[2_u8; 29]);
 const MINTER_PRINCIPAL: Principal = Principal::from_slice(&[3_u8; 29]);
+
+#[tokio::test]
+async fn should_install_ledger_suite() {
+    init_state();
+    let mut runtime = MockCanisterRuntime::new();
+
+    runtime.expect_id().return_const(LSM_PRINCIPAL);
+    expect_create_canister_returning(
+        &mut runtime,
+        vec![LSM_PRINCIPAL],
+        vec![Ok(LEDGER_PRINCIPAL), Ok(INDEX_PRINCIPAL)],
+    );
+    runtime.expect_install_code().times(2).return_const(Ok(()));
+
+    assert_eq!(
+        install_ledger_suite(&usdc_install_args(), &runtime).await,
+        Ok(())
+    );
+
+    assert_eq!(
+        read_state(|s| s.managed_canisters(&usdc()).cloned()),
+        Some(Canisters {
+            ledger: Some(LedgerCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: LEDGER_PRINCIPAL,
+                installed_wasm_hash: read_ledger_wasm_hash(),
+            })),
+            index: Some(IndexCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: INDEX_PRINCIPAL,
+                installed_wasm_hash: read_index_wasm_hash(),
+            })),
+            archives: vec![],
+            metadata: usdc_metadata(),
+        })
+    );
+}
+
+#[tokio::test]
+async fn should_not_retry_successful_operation_after_failing_one() {
+    init_state();
+    let mut runtime = MockCanisterRuntime::new();
+
+    runtime.expect_id().return_const(LSM_PRINCIPAL);
+    expect_create_canister_returning(
+        &mut runtime,
+        vec![LSM_PRINCIPAL],
+        vec![Ok(LEDGER_PRINCIPAL)],
+    );
+    let expected_error = CallError {
+        method: "install_code".to_string(),
+        reason: Reason::OutOfCycles,
+    };
+    runtime
+        .expect_install_code()
+        .times(1)
+        .return_const(Err(expected_error.clone()));
+
+    assert_eq!(
+        install_ledger_suite(&usdc_install_args(), &runtime).await,
+        Err(TaskError::InstallCodeError(expected_error))
+    );
+    assert_eq!(
+        read_state(|s| s.managed_canisters(&usdc()).cloned()),
+        Some(Canisters {
+            ledger: Some(LedgerCanister::new(ManagedCanisterStatus::Created {
+                canister_id: LEDGER_PRINCIPAL
+            })),
+            index: None,
+            archives: vec![],
+            metadata: usdc_metadata(),
+        })
+    );
+
+    runtime.checkpoint();
+    runtime.expect_id().return_const(LSM_PRINCIPAL);
+    let expected_error = CallError {
+        method: "create_canister".to_string(),
+        reason: Reason::OutOfCycles,
+    };
+    runtime.expect_install_code().times(1).return_const(Ok(()));
+    expect_create_canister_returning(
+        &mut runtime,
+        vec![LSM_PRINCIPAL],
+        vec![Err(expected_error.clone())],
+    );
+
+    assert_eq!(
+        install_ledger_suite(&usdc_install_args(), &runtime).await,
+        Err(TaskError::CanisterCreationError(expected_error))
+    );
+    assert_eq!(
+        read_state(|s| s.managed_canisters(&usdc()).cloned()),
+        Some(Canisters {
+            ledger: Some(LedgerCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: LEDGER_PRINCIPAL,
+                installed_wasm_hash: read_ledger_wasm_hash(),
+            })),
+            index: None,
+            archives: vec![],
+            metadata: usdc_metadata(),
+        })
+    );
+
+    runtime.checkpoint();
+    runtime.expect_id().return_const(LSM_PRINCIPAL);
+    expect_create_canister_returning(&mut runtime, vec![LSM_PRINCIPAL], vec![Ok(INDEX_PRINCIPAL)]);
+    let expected_error = CallError {
+        method: "install_code".to_string(),
+        reason: Reason::OutOfCycles,
+    };
+    runtime
+        .expect_install_code()
+        .times(1)
+        .return_const(Err(expected_error.clone()));
+
+    assert_eq!(
+        install_ledger_suite(&usdc_install_args(), &runtime).await,
+        Err(TaskError::InstallCodeError(expected_error))
+    );
+    assert_eq!(
+        read_state(|s| s.managed_canisters(&usdc()).cloned()),
+        Some(Canisters {
+            ledger: Some(LedgerCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: LEDGER_PRINCIPAL,
+                installed_wasm_hash: read_ledger_wasm_hash(),
+            })),
+            index: Some(IndexCanister::new(ManagedCanisterStatus::Created {
+                canister_id: INDEX_PRINCIPAL
+            })),
+            archives: vec![],
+            metadata: usdc_metadata(),
+        })
+    );
+
+    runtime.checkpoint();
+    runtime.expect_id().return_const(LSM_PRINCIPAL);
+    runtime.expect_install_code().times(1).return_const(Ok(()));
+    assert_eq!(
+        install_ledger_suite(&usdc_install_args(), &runtime).await,
+        Ok(())
+    );
+    assert_eq!(
+        read_state(|s| s.managed_canisters(&usdc()).cloned()),
+        Some(Canisters {
+            ledger: Some(LedgerCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: LEDGER_PRINCIPAL,
+                installed_wasm_hash: read_ledger_wasm_hash(),
+            })),
+            index: Some(IndexCanister::new(ManagedCanisterStatus::Installed {
+                canister_id: INDEX_PRINCIPAL,
+                installed_wasm_hash: read_index_wasm_hash(),
+            })),
+            archives: vec![],
+            metadata: usdc_metadata(),
+        })
+    );
+}
 
 fn init_state() {
     crate::state::init_state(new_state());
@@ -55,8 +215,25 @@ fn read_ledger_wasm_hash() -> WasmHash {
     WasmHash::from(ic_crypto_sha2::Sha256::hash(LEDGER_BYTECODE))
 }
 
-fn read_archive_wasm_hash() -> WasmHash {
-    WasmHash::from(ic_crypto_sha2::Sha256::hash(ARCHIVE_NODE_BYTECODE))
+fn expect_create_canister_returning(
+    runtime: &mut MockCanisterRuntime,
+    expected_controllers: Vec<Principal>,
+    results: Vec<Result<Principal, CallError>>,
+) {
+    assert!(!results.is_empty(), "must return at least one result");
+    let mut create_canister_call_counter = 0_usize;
+    runtime
+        .expect_create_canister()
+        .withf(move |controllers, _cycles| controllers == &expected_controllers)
+        .times(results.len())
+        .returning(move |_controllers, _cycles| {
+            if create_canister_call_counter >= results.len() {
+                panic!("create_canister called too many times!");
+            }
+            let result = results[create_canister_call_counter].clone();
+            create_canister_call_counter += 1;
+            result
+        });
 }
 
 mod mock {

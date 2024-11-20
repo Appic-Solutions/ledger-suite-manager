@@ -21,8 +21,7 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
         return Ok(());
     }
     let cycles_management = read_state(|s| s.cycles_management().clone());
-    let minimum_orchestrator_cycles =
-        cycles_to_u128(cycles_management.minimum_orchestrator_cycles());
+    let minimum_orchestrator_cycles = cycles_to_u128(cycles_management.minimum_manager_cycles());
     let minimum_monitored_canister_cycles =
         cycles_to_u128(cycles_management.minimum_monitored_canister_cycles());
     let top_up_amount = cycles_to_u128(cycles_management.cycles_top_up_increment.clone());
@@ -114,7 +113,7 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
     Ok(())
 }
 
-fn cycles_to_u128(cycles: Nat) -> u128 {
+pub fn cycles_to_u128(cycles: Nat) -> u128 {
     cycles
         .0
         .to_u128()
