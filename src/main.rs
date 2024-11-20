@@ -2,7 +2,7 @@ use candid::Nat;
 use ic_cdk::api::management_canister::main::{
     canister_status, CanisterIdRecord, CanisterStatusResponse,
 };
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
+use ic_cdk_macros::{init, post_upgrade, query, update};
 use icrc_twin_ledgers_manager::cmc_client::{CmcRunTime, CyclesConvertor};
 use icrc_twin_ledgers_manager::endpoints::{
     Erc20Contract, InitArg, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
@@ -19,16 +19,13 @@ use icrc_twin_ledgers_manager::state::{mutate_state, read_state, Canisters, Erc2
 use icrc_twin_ledgers_manager::storage::read_wasm_store;
 use icrc_twin_ledgers_manager::{
     endpoints::{AddErc20Arg, AddErc20Error},
-    tester::tester,
     DISCOVER_ARCHIVES_INTERVAL, ICP_TO_CYCLES_CONVERTION_INTERVAL, MAYBE_TOP_OP_INTERVAL,
 };
 use icrc_twin_ledgers_manager::{INSTALL_LEDGER_SUITE_INTERVAL, NOTIFY_ADD_ERC20_INTERVAL};
 
 use num_traits::ToPrimitive;
 
-fn main() {
-    tester();
-}
+fn main() {}
 
 #[init]
 fn init(arg: InitArg) {
@@ -219,3 +216,6 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
         }
     }
 }
+
+// Enable Candid export
+ic_cdk::export_candid!();

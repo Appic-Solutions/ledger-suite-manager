@@ -9,7 +9,6 @@ pub mod logs;
 pub mod management;
 pub mod state;
 pub mod storage;
-pub mod tester;
 
 pub const ICP_TO_CYCLES_CONVERTION_INTERVAL: Duration = Duration::from_secs(60 * 60);
 pub const DISCOVER_ARCHIVES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);

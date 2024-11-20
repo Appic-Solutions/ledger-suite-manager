@@ -13,9 +13,6 @@ use crate::state::{
 use crate::storage::{mutate_wasm_store, record_icrc1_ledger_suite_wasms};
 use crate::storage::{INDEX_BYTECODE, LEDGER_BYTECODE};
 use candid::Principal;
-use icrc_ledger_types::icrc3::archive::{GetArchivesArgs, GetArchivesResult};
-
-use super::install_ls::AddErc20Token;
 
 const LSM_PRINCIPAL: Principal = Principal::from_slice(&[0_u8; 29]);
 const LEDGER_PRINCIPAL: Principal = Principal::from_slice(&[1_u8; 29]);
