@@ -16,11 +16,12 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 // Wasm converted to byte code
-pub(crate) const LEDGER_BYTECODE: &[u8] = include_bytes!("../../wasm/ledger_canister_u256.wasm.gz");
+pub(crate) const LEDGER_BYTECODE: &[u8] =
+    include_bytes!("../../icrc_wasm/ledger_canister_u256.wasm.gz");
 pub(crate) const INDEX_BYTECODE: &[u8] =
-    include_bytes!("../../wasm/index_ng_canister_u256.wasm.gz");
+    include_bytes!("../../icrc_wasm/index_ng_canister_u256.wasm.gz");
 pub(crate) const ARCHIVE_NODE_BYTECODE: &[u8] =
-    include_bytes!("../../wasm/archive_canister_u256.wasm.gz");
+    include_bytes!("../../icrc_wasm/archive_canister_u256.wasm.gz");
 
 pub(crate) mod memory {
     use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};

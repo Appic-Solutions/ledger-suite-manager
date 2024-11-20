@@ -2,7 +2,7 @@ mod manage_canister {
     use crate::ledger_suite_manager::test_fixtures::{usdc, usdc_metadata, usdt, usdt_metadata};
     use crate::state::test_fixtures::{expect_panic_with_message, new_state};
     use crate::state::{
-        Canisters, Erc20Token, Index, Ledger, ManageSingleCanister, ManagedCanisterStatus, WasmHash,
+        Canisters, Index, Ledger, ManageSingleCanister, ManagedCanisterStatus, WasmHash,
     };
     use candid::Principal;
     use std::fmt::Debug;

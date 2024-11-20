@@ -1369,47 +1369,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "icrc_twin_ledgers_manager"
-version = "0.1.0"
-dependencies = [
- "assert_matches",
- "async-trait",
- "candid",
- "ciborium",
- "futures",
- "hex",
- "ic-base-types",
- "ic-canister-log 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ic-cbor",
- "ic-cdk 0.13.5",
- "ic-cdk-macros 0.9.0",
- "ic-cdk-timers",
- "ic-crypto-secp256k1",
- "ic-crypto-sha2",
- "ic-ethereum-types",
- "ic-icrc1-index-ng",
- "ic-icrc1-ledger",
- "ic-ledger-types",
- "ic-management-canister-types",
- "ic-stable-structures",
- "ic-utils-ensure",
- "ic0 0.21.1",
- "icrc-ledger-types",
- "maplit",
- "mockall",
- "num-traits",
- "paste",
- "proptest",
- "scopeguard",
- "scraper",
- "serde",
- "serde_bytes",
- "serde_cbor",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1501,6 +1460,48 @@ name = "log"
 version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
+
+[[package]]
+name = "lsm"
+version = "0.1.0"
+dependencies = [
+ "assert_matches",
+ "async-trait",
+ "candid",
+ "ciborium",
+ "futures",
+ "getrandom",
+ "hex",
+ "ic-base-types",
+ "ic-canister-log 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ic-cbor",
+ "ic-cdk 0.13.5",
+ "ic-cdk-macros 0.9.0",
+ "ic-cdk-timers",
+ "ic-crypto-secp256k1",
+ "ic-crypto-sha2",
+ "ic-ethereum-types",
+ "ic-icrc1-index-ng",
+ "ic-icrc1-ledger",
+ "ic-ledger-types",
+ "ic-management-canister-types",
+ "ic-stable-structures",
+ "ic-utils-ensure",
+ "ic0 0.21.1",
+ "icrc-ledger-types",
+ "maplit",
+ "mockall",
+ "num-traits",
+ "paste",
+ "proptest",
+ "scopeguard",
+ "scraper",
+ "serde",
+ "serde_bytes",
+ "serde_cbor",
+ "serde_json",
+ "tokio",
+]
 
 [[package]]
 name = "mac"

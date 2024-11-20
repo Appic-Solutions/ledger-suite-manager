@@ -3,25 +3,25 @@ use ic_cdk::api::management_canister::main::{
     canister_status, CanisterIdRecord, CanisterStatusResponse,
 };
 use ic_cdk_macros::{init, post_upgrade, query, update};
-use icrc_twin_ledgers_manager::cmc_client::{CmcRunTime, CyclesConvertor};
-use icrc_twin_ledgers_manager::endpoints::{
+use lsm::cmc_client::{CmcRunTime, CyclesConvertor};
+use lsm::endpoints::{
     Erc20Contract, InitArg, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
     LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters, UpgradeArg,
 };
-use icrc_twin_ledgers_manager::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
-use icrc_twin_ledgers_manager::ledger_suite_manager::{
+use lsm::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
+use lsm::ledger_suite_manager::{
     proccess_convert_icp_to_cycles, process_discover_archives, process_install_ledger_suites,
     process_maybe_topup, process_notify_add_erc20,
 };
 
-use icrc_twin_ledgers_manager::lifecycle::{self};
-use icrc_twin_ledgers_manager::state::{mutate_state, read_state, Canisters, Erc20Token};
-use icrc_twin_ledgers_manager::storage::read_wasm_store;
-use icrc_twin_ledgers_manager::{
+use lsm::lifecycle::{self};
+use lsm::state::{mutate_state, read_state, Canisters, Erc20Token};
+use lsm::storage::read_wasm_store;
+use lsm::{
     endpoints::{AddErc20Arg, AddErc20Error},
     DISCOVER_ARCHIVES_INTERVAL, ICP_TO_CYCLES_CONVERTION_INTERVAL, MAYBE_TOP_OP_INTERVAL,
 };
-use icrc_twin_ledgers_manager::{INSTALL_LEDGER_SUITE_INTERVAL, NOTIFY_ADD_ERC20_INTERVAL};
+use lsm::{INSTALL_LEDGER_SUITE_INTERVAL, NOTIFY_ADD_ERC20_INTERVAL};
 
 use num_traits::ToPrimitive;
 
