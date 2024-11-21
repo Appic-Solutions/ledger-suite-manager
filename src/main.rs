@@ -14,7 +14,7 @@ use lsm::ledger_suite_manager::{
     process_maybe_topup, process_notify_add_erc20,
 };
 
-use lsm::lifecycle::{self};
+use lsm::lifecycle::{self, LSMarg};
 use lsm::state::{mutate_state, read_state, Canisters, Erc20Token};
 use lsm::storage::read_wasm_store;
 use lsm::{
@@ -28,19 +28,28 @@ use num_traits::ToPrimitive;
 fn main() {}
 
 #[init]
-fn init(arg: InitArg) {
-    // Initilize casniter state and wasm_store.
-    lifecycle::init(arg);
+fn init(arg: LSMarg) {
+    match arg {
+        LSMarg::InitArg(init_arg) => {
+            // Initilize casniter state and wasm_store.
+            lifecycle::init(arg);
+        }
+        LSMarg::UpgradeArg(upgrade_arg) => ic_cdk::trap("Can not initilize with upgrade args."),
+    }
+
     // Set up timers
     setup_timers();
 }
 
 #[post_upgrade]
-fn post_upgrade(upgrade_args: Option<UpgradeArg>) {
+fn post_upgrade(upgrade_args: Option<LSMarg>) {
     // Upgrade necessary parts if needed
 
     match upgrade_args {
-        Some(upgrade_arg) => lifecycle::post_upgrade(Some(upgrade_arg)),
+        Some(LSMarg::InitArg(_)) => {
+            ic_cdk::trap("cannot upgrade canister state with init args");
+        }
+        Some(MinterArg::UpgradeArg(upgrade_args)) => lifecycle::post_upgrade(Some(upgrade_args)),
         None => lifecycle::post_upgrade(None),
     }
 
@@ -103,7 +112,7 @@ fn all_twins_canister_ids() -> Vec<ManagedCanisters> {
 }
 
 #[query]
-fn get_orchestrator_info() -> LedgerManagerInfo {
+fn get_lsm_info() -> LedgerManagerInfo {
     read_state(|s| {
         let erc20_canisters: Vec<(Erc20Token, &Canisters)> =
             s.all_managed_canisters_iter().collect();

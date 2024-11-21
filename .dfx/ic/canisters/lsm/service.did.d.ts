@@ -125,7 +125,7 @@ export interface _SERVICE {
   'add_native_ls' : ActorMethod<[InstalledNativeLedgerSuite], Result_1>,
   'all_twins_canister_ids' : ActorMethod<[], Array<ManagedCanisters>>,
   'get_canister_status' : ActorMethod<[], CanisterStatusResponse>,
-  'get_orchestrator_info' : ActorMethod<[], LedgerManagerInfo>,
+  'get_lsm_info' : ActorMethod<[], LedgerManagerInfo>,
   'twin_canister_ids_by_contract' : ActorMethod<
     [Erc20Contract],
     [] | [ManagedCanisterIds]

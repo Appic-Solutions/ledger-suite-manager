@@ -4,16 +4,18 @@ use crate::state::{init_state, mutate_state, ChainId, State};
 use crate::storage::{mutate_wasm_store, record_icrc1_ledger_suite_wasms};
 use ic_canister_log::log;
 
+#[derive(CandidType, Deserialize, Clone, Debug)]
+pub enum LSMarg {
+    InitArg(InitArg),
+    UpgradeArg(UpgradeArg),
+}
+
 pub fn init(init_arg: InitArg) {
-    log!(
-        INFO,
-        "[init]: initialized orchestrator with arg: {:?}",
-        init_arg
-    );
+    log!(INFO, "[init]: initialized lsm with arg: {:?}", init_arg);
 
     // Generate the state by init args
     let mut generate_state_from_init_args =
-        State::try_from(init_arg).expect("ERROR: failed to initialize ledger suite orchestrator");
+        State::try_from(init_arg).expect("ERROR: failed to initialize lsm");
 
     // Add the first wasm suite (Ledger,Index,Archive) to wasm store.
     // Wasms are genrated by (index,ledger,archive) wasms located in wasms directory.

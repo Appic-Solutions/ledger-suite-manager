@@ -117,7 +117,7 @@ service : {
   add_native_ls : (InstalledNativeLedgerSuite) -> (Result_1);
   all_twins_canister_ids : () -> (vec ManagedCanisters) query;
   get_canister_status : () -> (CanisterStatusResponse);
-  get_orchestrator_info : () -> (LedgerManagerInfo) query;
+  get_lsm_info : () -> (LedgerManagerInfo) query;
   twin_canister_ids_by_contract : (Erc20Contract) -> (
       opt ManagedCanisterIds,
     ) query;

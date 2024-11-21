@@ -138,7 +138,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'get_canister_status' : IDL.Func([], [CanisterStatusResponse], []),
-    'get_orchestrator_info' : IDL.Func([], [LedgerManagerInfo], ['query']),
+    'get_lsm_info' : IDL.Func([], [LedgerManagerInfo], ['query']),
     'twin_canister_ids_by_contract' : IDL.Func(
         [Erc20Contract],
         [IDL.Opt(ManagedCanisterIds)],

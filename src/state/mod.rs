@@ -403,7 +403,7 @@ pub enum ManagedCanisterStatus {
     Created { canister_id: Principal },
 
     /// Canister created and wasm module installed.
-    /// The wasm_hash reflects the installed wasm module by the orchestrator
+    /// The wasm_hash reflects the installed wasm module by the lsm
     /// but *may differ* from the one being currently deployed (if another controller did an upgrade)
     Installed {
         canister_id: Principal,
@@ -437,7 +437,7 @@ pub struct LedgerSuiteVersion {
     pub archive_compressed_wasm_hash: WasmHash,
 }
 
-/// Configuration state of the ledger orchestrator.
+/// Configuration state of the lsm.
 #[derive(Clone, PartialEq, Debug, Default)]
 enum ConfigState {
     #[default]

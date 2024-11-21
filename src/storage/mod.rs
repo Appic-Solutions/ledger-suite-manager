@@ -57,7 +57,7 @@ thread_local! {
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct StoredWasm {
-    /// The canister time at which the orchestrator stored this wasm
+    /// The canister time at which the lsm stored this wasm
     /// in nanoseconds since the epoch (1970-01-01).
     timestamp: u64,
     /// The wasm binary.
