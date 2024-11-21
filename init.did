@@ -1,16 +1,11 @@
-(
-    record {
-        minter_ids = vec {
-            record { 97 : nat; principal "2ztvj-yaaaa-aaaap-ahiza-cai" };
-        };
-        cycles_management = opt record {
-            cycles_top_up_increment = 1_000_000_000_000 : nat;
-            cycles_for_ledger_creation = 100_000_000_000 : nat;
-            cycles_for_archive_creation = 100_000_000_000 : nat;
-            cycles_for_index_creation = 10_000_000_000 : nat;
-        };
-        more_controller_ids = vec {};
-        twin_ls_creation_fee_appic_token = null;
-        twin_ls_creation_fee_icp_token = 3_000_000_000_000_000 : nat;
-    }
-);
+(record {
+    minter_ids = vec {
+        record { 97 : nat; principal "2ztvj-yaaaa-aaaap-ahiza-cai" };
+    };
+    cycles_management = null;
+    more_controller_ids = vec {
+        principal "6gplx-n62xg-ky6br-utvsz-l3vfe-jggch-hhico-7tydb-qtwu6-yiyhn-gqe";
+    };
+    twin_ls_creation_fee_appic_token = null;
+    twin_ls_creation_fee_icp_token = 2_500_000_000 : nat;
+})

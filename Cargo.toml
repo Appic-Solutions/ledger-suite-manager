@@ -58,4 +58,3 @@ tokio = { version = "1.40.0", features = ["full"] }
 getrandom = { version = "0.2", features = ["custom"] }
 [target.'cfg(not(all(target_arch = "wasm32", target_vendor = "unknown", target_os = "unknown")))'.dependencies]
 getrandom = { version = "0.2" }
-

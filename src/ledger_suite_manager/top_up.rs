@@ -21,19 +21,21 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
         return Ok(());
     }
     let cycles_management = read_state(|s| s.cycles_management().clone());
-    let minimum_orchestrator_cycles = cycles_to_u128(cycles_management.minimum_manager_cycles());
+    let minimum_manager_cycles = cycles_to_u128(cycles_management.minimum_manager_cycles());
     let minimum_monitored_canister_cycles =
         cycles_to_u128(cycles_management.minimum_monitored_canister_cycles());
     let top_up_amount = cycles_to_u128(cycles_management.cycles_top_up_increment.clone());
+
     log!(
         INFO,
         "[maybe_top_up]: Managed canisters {}. \
         Cycles management: {cycles_management:?}. \
-    Required amount of cycles for orchestrator to be able to top-up: {minimum_orchestrator_cycles}. \
-    Monitored canister minimum target cycles balance {minimum_monitored_canister_cycles}", display_iter(&managed_principals)
+    Required amount of cycles for manager to be able to top-up: {minimum_manager_cycles}. \
+    Monitored canister minimum target cycles balance {minimum_monitored_canister_cycles}",
+        display_iter(&managed_principals)
     );
 
-    let mut orchestrator_cycle_balance = match runtime.canister_cycles(runtime.id()).await {
+    let mut lsm_cycle_balance = match runtime.canister_cycles(runtime.id()).await {
         Ok(balance) => balance,
         Err(e) => {
             log!(
@@ -44,10 +46,10 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
             return Err(TaskError::CanisterStatusError(e));
         }
     };
-    if orchestrator_cycle_balance < minimum_orchestrator_cycles {
+    if lsm_cycle_balance < minimum_manager_cycles {
         return Err(TaskError::InsufficientCyclesToTopUp {
-            required: minimum_orchestrator_cycles,
-            available: orchestrator_cycle_balance,
+            required: minimum_manager_cycles,
+            available: lsm_cycle_balance,
         });
     }
 
@@ -64,7 +66,7 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
             Ok(balance) => {
                 match (
                     balance.cmp(&minimum_monitored_canister_cycles),
-                    orchestrator_cycle_balance.cmp(&minimum_orchestrator_cycles),
+                    lsm_cycle_balance.cmp(&minimum_manager_cycles),
                 ) {
                     (Ordering::Greater, _) | (Ordering::Equal, _) => {
                         log!(
@@ -74,8 +76,8 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
                     }
                     (_, Ordering::Less) => {
                         return Err(TaskError::InsufficientCyclesToTopUp {
-                            required: minimum_orchestrator_cycles,
-                            available: orchestrator_cycle_balance,
+                            required: minimum_manager_cycles,
+                            available: lsm_cycle_balance,
                         });
                     }
                     (Ordering::Less, Ordering::Equal) | (Ordering::Less, Ordering::Greater) => {
@@ -85,7 +87,7 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
                         );
                         match runtime.send_cycles(canister_id, top_up_amount) {
                             Ok(()) => {
-                                orchestrator_cycle_balance -= top_up_amount;
+                                lsm_cycle_balance -= top_up_amount;
                             }
                             Err(e) => {
                                 log!(

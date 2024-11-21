@@ -121,14 +121,17 @@ pub struct CyclesManagement {
 
 impl Default for CyclesManagement {
     fn default() -> Self {
-        const TEN_TRILLIONS: u64 = 10_000_000_000_000;
-        const HUNDRED_TRILLIONS: u64 = 100_000_000_000_000;
+        const FIVE_TRILLIONS: u64 = 5_000_000_000_000;
+
+        const FOUR_TRILLIONS: u64 = 4_000_000_000_000;
+
+        const TWO_TRILLIONS: u64 = 2_000_000_000_000;
 
         Self {
-            cycles_for_ledger_creation: Nat::from(2 * HUNDRED_TRILLIONS),
-            cycles_for_archive_creation: Nat::from(HUNDRED_TRILLIONS),
-            cycles_for_index_creation: Nat::from(HUNDRED_TRILLIONS),
-            cycles_top_up_increment: Nat::from(TEN_TRILLIONS),
+            cycles_for_ledger_creation: Nat::from(FIVE_TRILLIONS),
+            cycles_for_archive_creation: Nat::from(TWO_TRILLIONS),
+            cycles_for_index_creation: Nat::from(FIVE_TRILLIONS),
+            cycles_top_up_increment: Nat::from(FOUR_TRILLIONS),
         }
     }
 }
@@ -140,14 +143,14 @@ impl CyclesManagement {
     pub fn minimum_manager_cycles(&self) -> Nat {
         self.cycles_for_ledger_creation.clone()
             + self.cycles_for_index_creation.clone()
-            + 2_u8 * self.cycles_top_up_increment.clone()
+            + self.cycles_top_up_increment.clone()
     }
 
     /// Minimum amount of cycles all monitored canisters should always have and some slack.
     ///
     /// The chosen amount must ensure that the ledger should be able to spawn an archive canister at any time.
     pub fn minimum_monitored_canister_cycles(&self) -> Nat {
-        self.cycles_for_archive_creation.clone() + 2_u8 * self.cycles_top_up_increment.clone()
+        self.cycles_top_up_increment.clone()
     }
 }
 
