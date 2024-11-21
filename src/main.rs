@@ -5,8 +5,8 @@ use ic_cdk::api::management_canister::main::{
 use ic_cdk_macros::{init, post_upgrade, query, update};
 use lsm::cmc_client::{CmcRunTime, CyclesConvertor};
 use lsm::endpoints::{
-    Erc20Contract, InitArg, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
-    LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters, UpgradeArg,
+    Erc20Contract, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
+    LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters,
 };
 use lsm::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use lsm::ledger_suite_manager::{

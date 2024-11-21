@@ -33,6 +33,8 @@ pub fn init(init_arg: InitArg) {
 
 pub fn post_upgrade(upgrade_arg: Option<UpgradeArg>) {
     if let Some(arg) = upgrade_arg {
+        log!(INFO, "[init]: upgrading lsm with arg: {:?}", arg);
+
         if let Some(update) = arg.cycles_management {
             mutate_state(|s| update.apply(s.cycles_management_mut()));
         }
