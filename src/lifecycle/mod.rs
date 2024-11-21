@@ -2,6 +2,7 @@ use crate::endpoints::{InitArg, UpgradeArg};
 use crate::logs::INFO;
 use crate::state::{init_state, mutate_state, ChainId, State};
 use crate::storage::{mutate_wasm_store, record_icrc1_ledger_suite_wasms};
+use candid::{CandidType, Deserialize};
 use ic_canister_log::log;
 
 #[derive(CandidType, Deserialize, Clone, Debug)]

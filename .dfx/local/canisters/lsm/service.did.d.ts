@@ -60,6 +60,8 @@ export type InvalidNativeInstalledCanistersError = {
   { 'NotAllowed' : null } |
   { 'WasmHashError' : null } |
   { 'AlreadyManagedPrincipals' : null };
+export type LSMarg = { 'UpgradeArg' : UpgradeArg } |
+  { 'InitArg' : InitArg };
 export interface LedgerInitArg {
   'decimals' : number,
   'token_symbol' : string,
@@ -120,6 +122,24 @@ export type TransferFromError = {
   { 'CreatedInFuture' : { 'ledger_time' : bigint } } |
   { 'TooOld' : null } |
   { 'InsufficientFunds' : { 'balance' : bigint } };
+export interface UpdateCyclesManagement {
+  'cycles_top_up_increment' : [] | [bigint],
+  'cycles_for_ledger_creation' : [] | [bigint],
+  'cycles_for_archive_creation' : [] | [bigint],
+  'cycles_for_index_creation' : [] | [bigint],
+}
+export interface UpdateLedgerSuiteCreationFee {
+  'icp' : bigint,
+  'appic' : [] | [bigint],
+}
+export interface UpgradeArg {
+  'cycles_management' : [] | [UpdateCyclesManagement],
+  'archive_compressed_wasm_hash' : [] | [string],
+  'new_minter_ids' : [] | [Array<[bigint, Principal]>],
+  'ledger_compressed_wasm_hash' : [] | [string],
+  'index_compressed_wasm_hash' : [] | [string],
+  'twin_ls_creation_fees' : [] | [UpdateLedgerSuiteCreationFee],
+}
 export interface _SERVICE {
   'add_erc20_ls' : ActorMethod<[AddErc20Arg], Result>,
   'add_native_ls' : ActorMethod<[InstalledNativeLedgerSuite], Result_1>,

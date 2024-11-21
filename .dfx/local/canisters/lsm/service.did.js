@@ -1,4 +1,22 @@
 export const idlFactory = ({ IDL }) => {
+  const UpdateCyclesManagement = IDL.Record({
+    'cycles_top_up_increment' : IDL.Opt(IDL.Nat),
+    'cycles_for_ledger_creation' : IDL.Opt(IDL.Nat),
+    'cycles_for_archive_creation' : IDL.Opt(IDL.Nat),
+    'cycles_for_index_creation' : IDL.Opt(IDL.Nat),
+  });
+  const UpdateLedgerSuiteCreationFee = IDL.Record({
+    'icp' : IDL.Nat,
+    'appic' : IDL.Opt(IDL.Nat),
+  });
+  const UpgradeArg = IDL.Record({
+    'cycles_management' : IDL.Opt(UpdateCyclesManagement),
+    'archive_compressed_wasm_hash' : IDL.Opt(IDL.Text),
+    'new_minter_ids' : IDL.Opt(IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Principal))),
+    'ledger_compressed_wasm_hash' : IDL.Opt(IDL.Text),
+    'index_compressed_wasm_hash' : IDL.Opt(IDL.Text),
+    'twin_ls_creation_fees' : IDL.Opt(UpdateLedgerSuiteCreationFee),
+  });
   const CyclesManagement = IDL.Record({
     'cycles_top_up_increment' : IDL.Nat,
     'cycles_for_ledger_creation' : IDL.Nat,
@@ -11,6 +29,10 @@ export const idlFactory = ({ IDL }) => {
     'more_controller_ids' : IDL.Vec(IDL.Principal),
     'twin_ls_creation_fee_appic_token' : IDL.Opt(IDL.Nat),
     'twin_ls_creation_fee_icp_token' : IDL.Nat,
+  });
+  const LSMarg = IDL.Variant({
+    'UpgradeArg' : UpgradeArg,
+    'InitArg' : InitArg,
   });
   const Erc20Contract = IDL.Record({
     'chain_id' : IDL.Nat,
@@ -147,6 +169,24 @@ export const idlFactory = ({ IDL }) => {
   });
 };
 export const init = ({ IDL }) => {
+  const UpdateCyclesManagement = IDL.Record({
+    'cycles_top_up_increment' : IDL.Opt(IDL.Nat),
+    'cycles_for_ledger_creation' : IDL.Opt(IDL.Nat),
+    'cycles_for_archive_creation' : IDL.Opt(IDL.Nat),
+    'cycles_for_index_creation' : IDL.Opt(IDL.Nat),
+  });
+  const UpdateLedgerSuiteCreationFee = IDL.Record({
+    'icp' : IDL.Nat,
+    'appic' : IDL.Opt(IDL.Nat),
+  });
+  const UpgradeArg = IDL.Record({
+    'cycles_management' : IDL.Opt(UpdateCyclesManagement),
+    'archive_compressed_wasm_hash' : IDL.Opt(IDL.Text),
+    'new_minter_ids' : IDL.Opt(IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Principal))),
+    'ledger_compressed_wasm_hash' : IDL.Opt(IDL.Text),
+    'index_compressed_wasm_hash' : IDL.Opt(IDL.Text),
+    'twin_ls_creation_fees' : IDL.Opt(UpdateLedgerSuiteCreationFee),
+  });
   const CyclesManagement = IDL.Record({
     'cycles_top_up_increment' : IDL.Nat,
     'cycles_for_ledger_creation' : IDL.Nat,
@@ -160,5 +200,9 @@ export const init = ({ IDL }) => {
     'twin_ls_creation_fee_appic_token' : IDL.Opt(IDL.Nat),
     'twin_ls_creation_fee_icp_token' : IDL.Nat,
   });
-  return [InitArg];
+  const LSMarg = IDL.Variant({
+    'UpgradeArg' : UpgradeArg,
+    'InitArg' : InitArg,
+  });
+  return [LSMarg];
 };

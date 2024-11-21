@@ -32,9 +32,9 @@ fn init(arg: LSMarg) {
     match arg {
         LSMarg::InitArg(init_arg) => {
             // Initilize casniter state and wasm_store.
-            lifecycle::init(arg);
+            lifecycle::init(init_arg);
         }
-        LSMarg::UpgradeArg(upgrade_arg) => ic_cdk::trap("Can not initilize with upgrade args."),
+        LSMarg::UpgradeArg(_upgrade_arg) => ic_cdk::trap("Can not initilize with upgrade args."),
     }
 
     // Set up timers
@@ -49,7 +49,7 @@ fn post_upgrade(upgrade_args: Option<LSMarg>) {
         Some(LSMarg::InitArg(_)) => {
             ic_cdk::trap("cannot upgrade canister state with init args");
         }
-        Some(MinterArg::UpgradeArg(upgrade_args)) => lifecycle::post_upgrade(Some(upgrade_args)),
+        Some(LSMarg::UpgradeArg(upgrade_args)) => lifecycle::post_upgrade(Some(upgrade_args)),
         None => lifecycle::post_upgrade(None),
     }
 
