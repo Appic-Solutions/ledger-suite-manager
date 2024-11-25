@@ -1,4 +1,5 @@
 use candid::Nat;
+use ic_canister_log::log;
 use ic_cdk::api::management_canister::main::{
     canister_status, CanisterIdRecord, CanisterStatusResponse,
 };
@@ -15,6 +16,7 @@ use lsm::ledger_suite_manager::{
 };
 
 use lsm::lifecycle::{self, LSMarg};
+use lsm::logs::INFO;
 use lsm::state::{mutate_state, read_state, Canisters, Erc20Token};
 use lsm::storage::read_wasm_store;
 use lsm::{
@@ -151,9 +153,9 @@ fn add_native_ls(
     let caller = ic_cdk::caller();
 
     // Validate args corectness
-    let validate_native_ls = read_state(|s| native_ls.validate(s))?;
+    let validated_native_ls = read_state(|s| native_ls.validate(s))?;
 
-    let erc20_token = validate_native_ls.get_erc20_token();
+    let erc20_token = validated_native_ls.get_erc20_token();
 
     let _minter_id = read_state(|s| {
         let minter_id = s.minter_id(erc20_token.chain_id());
@@ -169,7 +171,16 @@ fn add_native_ls(
     })?;
 
     // Add the native ldger suite to the state
-    mutate_state(|s| s.record_new_native_erc20_token(erc20_token, validate_native_ls));
+    mutate_state(|s| {
+        s.record_new_native_erc20_token(erc20_token.clone(), validated_native_ls.clone())
+    });
+
+    log!(
+        INFO,
+        "Added a native ledger_suite for {:?} with metadata: {:?}",
+        erc20_token,
+        validated_native_ls
+    );
 
     Ok(())
 }

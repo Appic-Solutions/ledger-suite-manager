@@ -44,7 +44,7 @@ pub fn arb_state() -> impl Strategy<Value = State> {
 }
 
 pub fn arb_init_arg(size: impl Into<SizeRange>) -> impl Strategy<Value = InitArg> {
-    // at most 10 principals, including the orchestrator's principal
+    // at most 10 principals, including the lsm's principal
     (
         vec(arb_principal(), size),
         vec((arb_nat(), arb_principal()), 0..10),

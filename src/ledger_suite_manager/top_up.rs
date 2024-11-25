@@ -40,7 +40,7 @@ pub async fn maybe_top_up<R: CanisterRuntime>(runtime: &R) -> Result<(), TaskErr
         Err(e) => {
             log!(
                 INFO,
-                "[maybe_top_up] failed to get orchestrator status, with error: {:?}",
+                "[maybe_top_up] failed to get lsm status, with error: {:?}",
                 e
             );
             return Err(TaskError::CanisterStatusError(e));

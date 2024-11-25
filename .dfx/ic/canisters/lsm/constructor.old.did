@@ -16,7 +16,7 @@ type CanisterStatusResponse = record {
   settings : DefiniteCanisterSettings;
   query_stats : QueryStats;
   idle_cycles_burned_per_day : nat;
-  module_hash : opt vec nat8;
+  module_hash : opt blob;
   reserved_cycles : nat;
 };
 type CanisterStatusType = variant { stopped; stopping; running };
@@ -56,6 +56,7 @@ type InvalidNativeInstalledCanistersError = variant {
   WasmHashError;
   AlreadyManagedPrincipals;
 };
+type LSMarg = variant { UpgradeArg : UpgradeArg; InitArg : InitArg };
 type LedgerInitArg = record {
   decimals : nat8;
   token_symbol : text;
@@ -111,6 +112,21 @@ type TransferFromError = variant {
   CreatedInFuture : record { ledger_time : nat64 };
   TooOld;
   InsufficientFunds : record { balance : nat };
+};
+type UpdateCyclesManagement = record {
+  cycles_top_up_increment : opt nat;
+  cycles_for_ledger_creation : opt nat;
+  cycles_for_archive_creation : opt nat;
+  cycles_for_index_creation : opt nat;
+};
+type UpdateLedgerSuiteCreationFee = record { icp : nat; appic : opt nat };
+type UpgradeArg = record {
+  cycles_management : opt UpdateCyclesManagement;
+  archive_compressed_wasm_hash : opt text;
+  new_minter_ids : opt vec record { nat; principal };
+  ledger_compressed_wasm_hash : opt text;
+  index_compressed_wasm_hash : opt text;
+  twin_ls_creation_fees : opt UpdateLedgerSuiteCreationFee;
 };
 service : {
   add_erc20_ls : (AddErc20Arg) -> (Result);

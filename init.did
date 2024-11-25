@@ -1,11 +1,15 @@
-(record {
-    minter_ids = vec {
-        record { 97 : nat; principal "2ztvj-yaaaa-aaaap-ahiza-cai" };
-    };
-    cycles_management = null;
-    more_controller_ids = vec {
-        principal "6gplx-n62xg-ky6br-utvsz-l3vfe-jggch-hhico-7tydb-qtwu6-yiyhn-gqe";
-    };
-    twin_ls_creation_fee_appic_token = null;
-    twin_ls_creation_fee_icp_token = 2_500_000_000 : nat;
-})
+(
+    variant {
+        InitArg = record {
+            minter_ids = vec {
+                record { 97 : nat; principal "2ztvj-yaaaa-aaaap-ahiza-cai" }
+            };
+            cycles_management = null;
+            more_controller_ids = vec {
+                principal "6gplx-n62xg-ky6br-utvsz-l3vfe-jggch-hhico-7tydb-qtwu6-yiyhn-gqe";
+            };
+            twin_ls_creation_fee_appic_token = null;
+            twin_ls_creation_fee_icp_token = 2_500_000_000 : nat;
+        }
+    }
+)
