@@ -206,6 +206,19 @@ pub async fn process_notify_add_erc20() {
             return;
         }
     };
+    // At the time that a ledger suite is being installed this function should not run
+    // To prevetn already borrowed error
+
+    let _install_gaurd = match TimerGuard::new(PeriodicTasksTypes::InstallLedgerSuite) {
+        Ok(gaurd) => gaurd,
+        Err(e) => {
+            log!(
+                DEBUG,
+                "Failed retrieving timer guard to run Notify minter process: {e:?}",
+            );
+            return;
+        }
+    };
 
     let runtime = IcCanisterRuntime {};
 

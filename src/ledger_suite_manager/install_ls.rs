@@ -159,12 +159,10 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
     )
     .await?;
 
-    // Schedule notyfing minter for new erc token
+    // notyfing minter for new erc token
     mutate_state(|s| {
         if let Some(&minter_id) = s.minter_id(args.contract.chain_id()) {
             s.record_new_erc20_minter_notification(&args.contract, &minter_id);
-
-            ic_cdk::spawn(process_notify_add_erc20());
         }
     });
     Ok(())
