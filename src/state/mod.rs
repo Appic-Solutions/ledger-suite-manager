@@ -558,6 +558,10 @@ impl State {
         self.minter_id.get(chain_id)
     }
 
+    pub fn minter_id_owned(&self, chain_id: &ChainId) -> Option<Principal> {
+        self.minter_id.get(chain_id).copied()
+    }
+
     pub fn all_minter_ids(&self) -> Vec<(ChainId, Principal)> {
         self.minter_id.clone().into_iter().collect()
     }

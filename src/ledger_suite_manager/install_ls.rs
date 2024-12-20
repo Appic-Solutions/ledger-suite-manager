@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
-use super::{process_notify_add_erc20, TaskError};
+use super::TaskError;
 
 const THREE_GIGA_BYTES: u64 = 3_221_225_472;
 
@@ -160,12 +160,21 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
     .await?;
 
     // notyfing minter for new erc token
-    mutate_state(|s| {
-        if let Some(&minter_id) = s.minter_id(args.contract.chain_id()) {
-            s.record_new_erc20_minter_notification(&args.contract, &minter_id);
-        }
-    });
-    Ok(())
+    let minter_id = read_state(|s| s.minter_id_owned(args.contract.chain_id()));
+
+    let notifiy_result = match minter_id {
+        Some(minter_id) => notify_erc20_added(&args.contract, &minter_id, runtime).await,
+        None => Err(TaskError::MinterNotFound(args.contract.chain_id().clone())),
+    }?;
+
+    log!(
+        INFO,
+        "Notified minter {}  for {:?}",
+        minter_id.unwrap().to_text(),
+        args.contract,
+    );
+
+    Ok(notifiy_result)
 }
 
 fn record_new_erc20_token_once(token: Erc20Token, metadata: CanistersMetadata) {

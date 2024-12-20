@@ -15,14 +15,14 @@ use crate::ledger_suite_manager::top_up::maybe_top_up;
 use crate::logs::{DEBUG, INFO};
 use discover_archives::{discover_archives, select_all, DiscoverArchivesError};
 use ic_canister_log::log;
-use install_ls::{install_ledger_suite, notify_erc20_added, InstallLedgerSuiteArgs};
+use install_ls::{install_ledger_suite, InstallLedgerSuiteArgs};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 // use upgrade_ls::{UpgradeLedgerSuite, UpgradeLedgerSuiteError};
 
 use crate::guard::TimerGuard;
 use crate::management::{CallError, IcCanisterRuntime, Reason};
-use crate::state::{mutate_state, read_state, Erc20Token, WasmHash};
+use crate::state::{mutate_state, read_state, ChainId, Erc20Token, WasmHash};
 use crate::storage::WasmStoreError;
 
 // User for TimerGaurd to prevent Concurrency problems
@@ -58,6 +58,7 @@ pub enum TaskError {
     InterCanisterCallError(CallError),
     InsufficientCyclesToTopUp { required: u128, available: u128 },
     DiscoverArchivesError(DiscoverArchivesError),
+    MinterNotFound(ChainId),
     // UpgradeLedgerSuiteError(UpgradeLedgerSuiteError),
 }
 
@@ -75,6 +76,7 @@ impl TaskError {
             TaskError::InterCanisterCallError(e) => is_recoverable(e),
             TaskError::InsufficientCyclesToTopUp { .. } => false, //top-up task is periodic, will retry on next interval
             TaskError::DiscoverArchivesError(e) => e.is_recoverable(),
+            TaskError::MinterNotFound(..) => false,
             // TaskError::UpgradeLedgerSuiteError(e) => e.is_recoverable(),
         }
     }
@@ -192,62 +194,6 @@ pub async fn process_discover_archives() {
                 );
             }
         },
-    }
-}
-
-pub async fn process_notify_add_erc20() {
-    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::NotifyErc20Added) {
-        Ok(gaurd) => gaurd,
-        Err(e) => {
-            log!(
-                DEBUG,
-                "Failed retrieving timer guard to run Notify minter process: {e:?}",
-            );
-            return;
-        }
-    };
-    // At the time that a ledger suite is being installed this function should not run
-    // To prevetn already borrowed error
-
-    let _install_gaurd = match TimerGuard::new(PeriodicTasksTypes::InstallLedgerSuite) {
-        Ok(gaurd) => gaurd,
-        Err(e) => {
-            log!(
-                DEBUG,
-                "Failed retrieving timer guard to run Notify minter process: {e:?}",
-            );
-            return;
-        }
-    };
-
-    let runtime = IcCanisterRuntime {};
-
-    let erc20_tokens_to_be_added_to_minters = read_state(|s| s.notify_add_erc20_list.clone());
-
-    for (token, minter_id) in erc20_tokens_to_be_added_to_minters {
-        let notify_minters_result: Result<(), TaskError> =
-            notify_erc20_added(&token, &minter_id, &runtime).await;
-
-        match notify_minters_result {
-            Ok(_) => {
-                mutate_state(|s| s.remove_erc20_from_minter_notification_list(&token));
-                log!(INFO, "Notified minter: {}, of token:{:?}", minter_id, token);
-            }
-            Err(task_error) => match task_error.is_recoverable() {
-                true => {
-                    log!(
-                    INFO,
-                    "Failed to Notify minter. Error is recoverable and will try again in the next iterationn. {:?}",task_error);
-                }
-                false => {
-                    log!(
-                        DEBUG,
-                        "Failed to Notify minter, Error is not recoverable. error: {:?}",
-                        task_error
-                    );
-                }
-            },
-        }
     }
 }
 
