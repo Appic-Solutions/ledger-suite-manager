@@ -56,7 +56,7 @@ type InvalidNativeInstalledCanistersError = variant {
   WasmHashError;
   AlreadyManagedPrincipals;
 };
-type LSMarg = variant { UpgradeArg : UpgradeArg; InitArg : InitArg };
+type LSMarg = variant { Upgrade : UpgradeArg; Init : InitArg };
 type LedgerInitArg = record {
   decimals : nat8;
   token_symbol : text;

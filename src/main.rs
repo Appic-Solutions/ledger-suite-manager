@@ -19,7 +19,14 @@ use lsm::lifecycle::{self, LSMarg};
 use lsm::logs::INFO;
 use lsm::state::{mutate_state, read_state, Canisters, Erc20Token};
 use lsm::storage::read_wasm_store;
-use lsm::INSTALL_LEDGER_SUITE_INTERVAL;
+use lsm::{
+    appic_helper_client::appic_helper_types::{
+        CandidAddErc20TwinLedgerSuiteRequest, CandidErc20TwinLedgerSuiteFee,
+        CandidErc20TwinLedgerSuiteStatus,
+    },
+    appic_helper_client::AppicHelperClient,
+    INSTALL_LEDGER_SUITE_INTERVAL,
+};
 use lsm::{
     endpoints::{AddErc20Arg, AddErc20Error},
     DISCOVER_ARCHIVES_INTERVAL, ICP_TO_CYCLES_CONVERTION_INTERVAL, MAYBE_TOP_OP_INTERVAL,
@@ -32,11 +39,11 @@ fn main() {}
 #[init]
 fn init(arg: LSMarg) {
     match arg {
-        LSMarg::InitArg(init_arg) => {
+        LSMarg::Init(init_arg) => {
             // Initilize casniter state and wasm_store.
             lifecycle::init(init_arg);
         }
-        LSMarg::UpgradeArg(_upgrade_arg) => ic_cdk::trap("Can not initilize with upgrade args."),
+        LSMarg::Upgrade(_upgrade_arg) => ic_cdk::trap("Can not initilize with upgrade args."),
     }
 
     // Set up timers
@@ -48,10 +55,10 @@ fn post_upgrade(upgrade_args: Option<LSMarg>) {
     // Upgrade necessary parts if needed
 
     match upgrade_args {
-        Some(LSMarg::InitArg(_)) => {
+        Some(LSMarg::Init(_)) => {
             ic_cdk::trap("cannot upgrade canister state with init args");
         }
-        Some(LSMarg::UpgradeArg(upgrade_args)) => lifecycle::post_upgrade(Some(upgrade_args)),
+        Some(LSMarg::Upgrade(upgrade_args)) => lifecycle::post_upgrade(Some(upgrade_args)),
         None => lifecycle::post_upgrade(None),
     }
 
@@ -184,9 +191,13 @@ fn add_native_ls(
 async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
     let caller = ic_cdk::caller();
 
+    let time = ic_cdk::api::time();
+
     // Validate args correctness
     let install_ledger_suite_args = read_state(|s| {
-        read_wasm_store(|w| InstallLedgerSuiteArgs::validate_add_erc20(s, w, erc20_args.clone()))
+        read_wasm_store(|w| {
+            InstallLedgerSuiteArgs::validate_add_erc20(s, w, erc20_args.clone(), caller, time)
+        })
     })?;
 
     // Get amount of icps required for ledger suite creation
@@ -209,8 +220,36 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
         .expect("This opration should not fail");
 
     match deposit_result {
-        Err(transfer_error) => return Err(AddErc20Error::TransferIcpError(transfer_error)),
+        Err(transfer_error) => Err(AddErc20Error::TransferIcpError(transfer_error)),
         Ok(transfer_index) => {
+            // Notify appic helper of new erc20 twins
+            let helper_client = AppicHelperClient::new();
+
+            let new_ls_args = CandidAddErc20TwinLedgerSuiteRequest {
+                status: CandidErc20TwinLedgerSuiteStatus::PendingApproval,
+                creator: caller,
+                icp_ledger_id: None,
+                icp_token_name: install_ledger_suite_args.ledger_init_arg.token_name.clone(),
+                created_at: time,
+                fee_charged: CandidErc20TwinLedgerSuiteFee::Icp(
+                    twin_creation_fee_amount_in_icp.into(),
+                ),
+                icp_token_symbol: install_ledger_suite_args
+                    .ledger_init_arg
+                    .token_symbol
+                    .clone(),
+                evm_token_contract: install_ledger_suite_args.contract.address().to_string(),
+                evm_token_chain_id: Nat::from(
+                    install_ledger_suite_args
+                        .contract
+                        .chain_id()
+                        .as_ref()
+                        .clone(),
+                ),
+            };
+            let _ = helper_client.new_ls_request(new_ls_args).await;
+
+            // Add request to state
             mutate_state(|s| {
                 // Record deposit into state
                 s.record_new_icp_deposit(
@@ -229,7 +268,9 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
                 Ok(())
             })
         }
-    }
+    }?;
+
+    Ok(())
 }
 
 // Enable Candid export

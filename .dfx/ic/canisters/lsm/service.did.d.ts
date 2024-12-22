@@ -60,8 +60,8 @@ export type InvalidNativeInstalledCanistersError = {
   { 'NotAllowed' : null } |
   { 'WasmHashError' : null } |
   { 'AlreadyManagedPrincipals' : null };
-export type LSMarg = { 'UpgradeArg' : UpgradeArg } |
-  { 'InitArg' : InitArg };
+export type LSMarg = { 'Upgrade' : UpgradeArg } |
+  { 'Init' : InitArg };
 export interface LedgerInitArg {
   'decimals' : number,
   'token_symbol' : string,

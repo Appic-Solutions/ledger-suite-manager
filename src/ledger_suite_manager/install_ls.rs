@@ -1,3 +1,8 @@
+use crate::appic_helper_client::appic_helper_types::{
+    CandidAddErc20TwinLedgerSuiteRequest, CandidErc20TwinLedgerSuiteFee,
+    CandidErc20TwinLedgerSuiteStatus, CandidIcpToken, IcpTokenType,
+};
+use crate::appic_helper_client::AppicHelperClient;
 use crate::endpoints::CyclesManagement;
 use crate::logs::INFO;
 use crate::management::CanisterRuntime;
@@ -29,6 +34,8 @@ const THREE_GIGA_BYTES: u64 = 3_221_225_472;
 pub struct InstallLedgerSuiteArgs {
     pub contract: Erc20Token,
     pub minter_id: Principal,
+    pub creator: Principal,
+    pub created_at: u64,
     pub ledger_init_arg: LedgerInitArg,
     pub ledger_compressed_wasm_hash: WasmHash,
     pub index_compressed_wasm_hash: WasmHash,
@@ -59,6 +66,8 @@ impl InstallLedgerSuiteArgs {
         state: &State,
         wasm_store: &WasmStore,
         args: AddErc20Arg,
+        creator: Principal,
+        created_at: u64,
     ) -> Result<InstallLedgerSuiteArgs, InvalidAddErc20ArgError> {
         let token = Erc20Token::try_from(args.contract.clone())
             .map_err(|e| InvalidAddErc20ArgError::InvalidErc20Contract(e.to_string()))?;
@@ -102,6 +111,8 @@ impl InstallLedgerSuiteArgs {
             ledger_init_arg: args.ledger_init_arg,
             ledger_compressed_wasm_hash,
             index_compressed_wasm_hash,
+            creator,
+            created_at,
         })
     }
 }
@@ -116,6 +127,10 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
             token_symbol: args.ledger_init_arg.token_symbol.clone(),
         },
     );
+    // Get amount of icps required for ledger suite creation
+    let twin_creation_fee_amount_in_icp =
+        read_state(|s| s.minimum_tokens_for_new_ledger_suite().icp);
+
     let CyclesManagement {
         cycles_for_ledger_creation,
         cycles_for_index_creation,
@@ -144,6 +159,27 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
     )
     .await?;
 
+    // Notify appic helper of new erc20 twins
+    let helper_client = AppicHelperClient::new();
+
+    // Generate new icp token to be added to appic helper
+    let icp_token = CandidIcpToken {
+        fee: args.ledger_init_arg.transfer_fee.clone(),
+        decimals: args.ledger_init_arg.decimals,
+        usd_price: "0".to_string(),
+        logo: args.ledger_init_arg.token_logo.clone(),
+        name: args.ledger_init_arg.token_name.clone(),
+        rank: Some(1_u32),
+        ledger_id: ledger_canister_id,
+        token_type: IcpTokenType::Icrc2,
+        symbol: args.ledger_init_arg.token_symbol.clone(),
+    };
+
+    helper_client
+        .add_icp_token(icp_token)
+        .await
+        .map_err(|e| TaskError::InterCanisterCallError(e))?;
+
     let _index_principal =
         create_canister_once::<Index, _>(&args.contract, runtime, cycles_for_index_creation)
             .await?;
@@ -166,6 +202,23 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
         Some(minter_id) => notify_erc20_added(&args.contract, &minter_id, runtime).await,
         None => Err(TaskError::MinterNotFound(args.contract.chain_id().clone())),
     }?;
+
+    let update_ls_args = CandidAddErc20TwinLedgerSuiteRequest {
+        status: CandidErc20TwinLedgerSuiteStatus::Installed,
+        creator: args.creator,
+        icp_ledger_id: Some(ledger_canister_id),
+        icp_token_name: args.ledger_init_arg.token_name.clone(),
+        created_at: args.created_at,
+        fee_charged: CandidErc20TwinLedgerSuiteFee::Icp(twin_creation_fee_amount_in_icp.into()),
+        icp_token_symbol: args.ledger_init_arg.token_symbol.clone(),
+        evm_token_contract: args.contract.address().to_string(),
+        evm_token_chain_id: Nat::from(args.contract.chain_id().as_ref().clone()),
+    };
+
+    helper_client
+        .update_ls_request(update_ls_args)
+        .await
+        .map_err(|e| TaskError::InterCanisterCallError(e))?;
 
     log!(
         INFO,
@@ -426,3 +479,30 @@ pub async fn notify_erc20_added<R: CanisterRuntime>(
         _ => Err(TaskError::LedgerNotFound(token.clone())),
     }
 }
+
+// pub async fn notify_appic_helper_casniter<R: CanisterRuntime>(
+//     token: &Erc20Token,
+//     helper_id: Principal,
+//     runtime: &R,
+// ) -> Result<(), TaskError> {
+//     let managed_canisters = read_state(|s| s.managed_canisters(&token).cloned());
+//     match managed_canisters {
+//         Some(Canisters {
+//             ledger: Some(ledger),
+//             metadata,
+//             ..
+//         }) => {
+//             let args = AddErc20Token {
+//                 chain_id: Nat::from(*token.chain_id().as_ref()),
+//                 address: token.address().to_string(),
+//                 erc20_token_symbol: metadata.token_symbol,
+//                 erc20_ledger_id: *ledger.canister_id(),
+//             };
+//             runtime
+//                 .call_canister(minter_id, "add_erc20_token", args)
+//                 .await
+//                 .map_err(TaskError::InterCanisterCallError)
+//         }
+//         _ => Err(TaskError::LedgerNotFound(token.clone())),
+//     }
+// }

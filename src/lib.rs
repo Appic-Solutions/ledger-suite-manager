@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+pub mod appic_helper_client;
 pub mod cmc_client;
 pub mod endpoints;
 pub mod guard;

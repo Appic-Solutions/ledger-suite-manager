@@ -191,6 +191,11 @@ fn usdc_install_args() -> InstallLedgerSuiteArgs {
         ledger_init_arg: ledger_init_arg(),
         ledger_compressed_wasm_hash: read_ledger_wasm_hash(),
         index_compressed_wasm_hash: read_index_wasm_hash(),
+        creator: Principal::from_text(
+            "tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae",
+        )
+        .unwrap(),
+        created_at: 0,
     }
 }
 
@@ -314,7 +319,7 @@ mod install_ledger_suite_args {
     use crate::storage::test_fixtures::{embedded_ledger_suite_version, empty_wasm_store};
     use crate::storage::{record_icrc1_ledger_suite_wasms, WasmStore};
     use assert_matches::assert_matches;
-    use candid::Nat;
+    use candid::{Nat, Principal};
     use proptest::proptest;
 
     const ERC20_CONTRACT_ADDRESS: &str = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -325,7 +330,7 @@ mod install_ledger_suite_args {
         let wasm_store = wasm_store_with_icrc1_ledger_suite();
 
         assert_matches!(
-            InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, valid_add_erc20_arg()),
+            InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, valid_add_erc20_arg(),Principal::from_text("tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae").unwrap(), 0),
             Err(InvalidAddErc20ArgError::ChainIdNotSupported( error )) if error.contains("ERROR: Target evm chain is not yet supported")
         );
     }
@@ -343,7 +348,16 @@ mod install_ledger_suite_args {
         state.record_new_erc20_token(contract.clone(), usdc_metadata());
 
         assert_eq!(
-            InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, arg),
+            InstallLedgerSuiteArgs::validate_add_erc20(
+                &state,
+                &wasm_store,
+                arg,
+                Principal::from_text(
+                    "tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae"
+                )
+                .unwrap(),
+                0
+            ),
             Err(InvalidAddErc20ArgError::Erc20ContractAlreadyManaged(
                 contract
             ))
@@ -360,7 +374,7 @@ mod install_ledger_suite_args {
             let mut arg = valid_add_erc20_arg();
             arg.contract.address = invalid_address;
             assert_matches!(
-                InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, arg),
+                InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, arg,Principal::from_text("tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae").unwrap(), 0),
                 Err(InvalidAddErc20ArgError::InvalidErc20Contract(_))
             );
         }
@@ -374,7 +388,7 @@ mod install_ledger_suite_args {
             arg.contract.chain_id = Nat::from((u64::MAX as u128) + offset);
 
             assert_matches!(
-                InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, arg),
+                InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, arg,Principal::from_text("tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae").unwrap(), 0),
                 Err(InvalidAddErc20ArgError::InvalidErc20Contract(_))
             );
         }
@@ -395,6 +409,11 @@ mod install_ledger_suite_args {
                     &state,
                     &wasm_store,
                     valid_add_erc20_arg(),
+                    Principal::from_text(
+                        "tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae",
+                    )
+                    .unwrap(),
+                    0,
                 )
             },
             "ledger suite version missing",
@@ -426,6 +445,11 @@ mod install_ledger_suite_args {
                         &state,
                         &wasm_store,
                         valid_add_erc20_arg(),
+                        Principal::from_text(
+                            "tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae",
+                        )
+                        .unwrap(),
+                        0,
                     )
                 },
                 "wasm hash missing",
@@ -444,7 +468,15 @@ mod install_ledger_suite_args {
         let arg = valid_add_erc20_arg();
         let ledger_init_arg = arg.ledger_init_arg.clone();
 
-        let result = InstallLedgerSuiteArgs::validate_add_erc20(&state, &wasm_store, arg).unwrap();
+        let result = InstallLedgerSuiteArgs::validate_add_erc20(
+            &state,
+            &wasm_store,
+            arg,
+            Principal::from_text("tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae")
+                .unwrap(),
+            0,
+        )
+        .unwrap();
 
         assert_eq!(
             result,
@@ -461,6 +493,11 @@ mod install_ledger_suite_args {
                 index_compressed_wasm_hash: IndexWasm::from(crate::storage::INDEX_BYTECODE)
                     .hash()
                     .clone(),
+                creator: Principal::from_text(
+                    "tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae"
+                )
+                .unwrap(),
+                created_at: 0
             }
         );
     }

@@ -7,8 +7,8 @@ use ic_canister_log::log;
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub enum LSMarg {
-    InitArg(InitArg),
-    UpgradeArg(UpgradeArg),
+    Init(InitArg),
+    Upgrade(UpgradeArg),
 }
 
 pub fn init(init_arg: InitArg) {

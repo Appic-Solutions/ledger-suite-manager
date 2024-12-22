@@ -30,10 +30,7 @@ export const idlFactory = ({ IDL }) => {
     'twin_ls_creation_fee_appic_token' : IDL.Opt(IDL.Nat),
     'twin_ls_creation_fee_icp_token' : IDL.Nat,
   });
-  const LSMarg = IDL.Variant({
-    'UpgradeArg' : UpgradeArg,
-    'InitArg' : InitArg,
-  });
+  const LSMarg = IDL.Variant({ 'Upgrade' : UpgradeArg, 'Init' : InitArg });
   const Erc20Contract = IDL.Record({
     'chain_id' : IDL.Nat,
     'address' : IDL.Text,
@@ -200,9 +197,6 @@ export const init = ({ IDL }) => {
     'twin_ls_creation_fee_appic_token' : IDL.Opt(IDL.Nat),
     'twin_ls_creation_fee_icp_token' : IDL.Nat,
   });
-  const LSMarg = IDL.Variant({
-    'UpgradeArg' : UpgradeArg,
-    'InitArg' : InitArg,
-  });
+  const LSMarg = IDL.Variant({ 'Upgrade' : UpgradeArg, 'Init' : InitArg });
   return [LSMarg];
 };

@@ -45,6 +45,7 @@ pub enum Task {
     DiscoverArchives,
     NotifyErc20Added,
     ConvertIcpToCycles,
+    NotifyAppicHelper,
 }
 
 #[derive(Clone, Debug, PartialEq)]

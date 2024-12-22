@@ -1,6 +1,6 @@
 (
     variant {
-        InitArg = record {
+        Init = record {
             minter_ids = vec {
                 record { 97 : nat; principal "2ztvj-yaaaa-aaaap-ahiza-cai" }
             };
