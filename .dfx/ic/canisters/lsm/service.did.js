@@ -69,6 +69,10 @@ export const idlFactory = ({ IDL }) => {
   });
   const Result = IDL.Variant({ 'Ok' : IDL.Null, 'Err' : AddErc20Error });
   const InstalledNativeLedgerSuite = IDL.Record({
+    'fee' : IDL.Nat,
+    'decimals' : IDL.Nat8,
+    'logo' : IDL.Text,
+    'name' : IDL.Text,
     'chain_id' : IDL.Nat,
     'ledger_wasm_hash' : IDL.Text,
     'ledger' : IDL.Principal,
@@ -81,6 +85,7 @@ export const idlFactory = ({ IDL }) => {
     'TokenAlreadyManaged' : IDL.Null,
     'NotAllowed' : IDL.Null,
     'WasmHashError' : IDL.Null,
+    'FailedToNotifyAppicHelper' : IDL.Null,
     'AlreadyManagedPrincipals' : IDL.Null,
   });
   const Result_1 = IDL.Variant({

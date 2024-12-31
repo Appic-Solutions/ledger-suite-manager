@@ -46,6 +46,10 @@ export interface InitArg {
   'twin_ls_creation_fee_icp_token' : bigint,
 }
 export interface InstalledNativeLedgerSuite {
+  'fee' : bigint,
+  'decimals' : number,
+  'logo' : string,
+  'name' : string,
   'chain_id' : bigint,
   'ledger_wasm_hash' : string,
   'ledger' : Principal,
@@ -59,6 +63,7 @@ export type InvalidNativeInstalledCanistersError = {
   } |
   { 'NotAllowed' : null } |
   { 'WasmHashError' : null } |
+  { 'FailedToNotifyAppicHelper' : null } |
   { 'AlreadyManagedPrincipals' : null };
 export type LSMarg = { 'Upgrade' : UpgradeArg } |
   { 'Init' : InitArg };

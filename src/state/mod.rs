@@ -617,7 +617,7 @@ impl State {
         self.minimum_tokens_for_new_ledger_suite.clone()
     }
 
-    pub fn upate_minimum_tokens_for_new_ledger_suite(
+    pub fn update_minimum_tokens_for_new_ledger_suite(
         &mut self,
         new_ls_fees: LedgerSuiteCreationFee,
     ) {
@@ -789,7 +789,7 @@ impl TryFrom<InitArg> for State {
             .map(|(chain_id, minter_principal)| (ChainId::from(chain_id), minter_principal))
             .collect();
 
-        // Initilize BTreeMap with the parsed vector of minter ids
+        // Initialize BTreeMap with the parsed vector of minter ids
         let minter_ids_map: BTreeMap<ChainId, Principal> =
             BTreeMap::from_iter(minter_ids_vec.into_iter());
 
@@ -973,6 +973,10 @@ impl InstalledNativeLedgerSuite {
             return Err(InvalidNativeInstalledCanistersError::AlreadyManagedPrincipals);
         }
         Ok(InstalledNativeLedgerSuite {
+            decimals: self.decimals,
+            fee: self.fee,
+            logo: self.logo,
+            name: self.name,
             symbol,
             ledger,
             ledger_wasm_hash: ledger_wasm_hash.to_string(),

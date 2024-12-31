@@ -25,7 +25,7 @@ use crate::management::{CallError, IcCanisterRuntime, Reason};
 use crate::state::{mutate_state, read_state, ChainId, Erc20Token, WasmHash};
 use crate::storage::WasmStoreError;
 
-// User for TimerGaurd to prevent Concurrency problems
+// User for TimerGuard to prevent Concurrency problems
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Deserialize, Serialize, Hash, Copy)]
 pub enum PeriodicTasksTypes {
     InstallLedgerSuite,
@@ -104,8 +104,8 @@ fn display_iter<I: Display, T: IntoIterator<Item = I>>(v: T) -> String {
 }
 
 pub async fn process_install_ledger_suites() {
-    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::InstallLedgerSuite) {
-        Ok(gaurd) => gaurd,
+    let _guard = match TimerGuard::new(PeriodicTasksTypes::InstallLedgerSuite) {
+        Ok(guard) => guard,
         Err(e) => {
             log!(
                 DEBUG,
@@ -143,7 +143,7 @@ pub async fn process_install_ledger_suites() {
                 true => {
                     log!(
                         INFO,
-                        "Failed to install for contract address: {}, chain_id:{:?}. Error is recoverable and will try again in the next iterationn",
+                        "Failed to install for contract address: {}, chain_id:{:?}. Error is recoverable and will try again in the next iteration",
                         contract.address(),
                         contract.chain_id()
                     );
@@ -164,8 +164,8 @@ pub async fn process_install_ledger_suites() {
 }
 
 pub async fn process_discover_archives() {
-    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::DiscoverArchives) {
-        Ok(gaurd) => gaurd,
+    let _guard = match TimerGuard::new(PeriodicTasksTypes::DiscoverArchives) {
+        Ok(guard) => guard,
         Err(e) => {
             log!(
                 DEBUG,
@@ -199,8 +199,8 @@ pub async fn process_discover_archives() {
 }
 
 pub async fn process_maybe_topup() {
-    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::MaybeTopUp) {
-        Ok(gaurd) => gaurd,
+    let _guard = match TimerGuard::new(PeriodicTasksTypes::MaybeTopUp) {
+        Ok(guard) => guard,
         Err(e) => {
             log!(
                 DEBUG,
@@ -233,13 +233,13 @@ pub async fn process_maybe_topup() {
     }
 }
 
-pub async fn proccess_convert_icp_to_cycles() {
-    let _gaurd = match TimerGuard::new(PeriodicTasksTypes::ConvertIcpToCycles) {
-        Ok(gaurd) => gaurd,
+pub async fn process_convert_icp_to_cycles() {
+    let _guard = match TimerGuard::new(PeriodicTasksTypes::ConvertIcpToCycles) {
+        Ok(guard) => guard,
         Err(e) => {
             log!(
                 DEBUG,
-                "Failed retrieving timer guard to run icpto cycles conversion process suites: {e:?}",
+                "Failed retrieving timer guard to run ICP to cycles conversion process suites: {e:?}",
             );
             return;
         }
@@ -251,12 +251,12 @@ pub async fn proccess_convert_icp_to_cycles() {
 
     match top_up_result {
         Ok(cycles) => {
-            log!(INFO, "Toped_up casniter with {} cycles.", cycles);
+            log!(INFO, "Toped_up canister with {} cycles.", cycles);
         }
         Err(cycles_error) => {
             log!(
                 INFO,
-                "Failed to mint new cycles and top_up casniter. reason: {:?}",
+                "Failed to mint new cycles and top_up canister. reason: {:?}",
                 cycles_error
             );
         }

@@ -4,6 +4,7 @@ use ic_cdk::api::management_canister::main::{
     canister_status, CanisterIdRecord, CanisterStatusResponse,
 };
 use ic_cdk_macros::{init, post_upgrade, query, update};
+use lsm::appic_helper_client::appic_helper_types::IcpTokenType;
 use lsm::cmc_client::{CmcRunTime, CyclesConvertor};
 use lsm::endpoints::{
     Erc20Contract, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
@@ -11,10 +12,11 @@ use lsm::endpoints::{
 };
 use lsm::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use lsm::ledger_suite_manager::{
-    proccess_convert_icp_to_cycles, process_discover_archives, process_install_ledger_suites,
+    process_convert_icp_to_cycles, process_discover_archives, process_install_ledger_suites,
     process_maybe_topup,
 };
 
+use lsm::appic_helper_client::appic_helper_types::CandidIcpToken;
 use lsm::lifecycle::{self, LSMarg};
 use lsm::logs::INFO;
 use lsm::state::{mutate_state, read_state, Canisters, Erc20Token};
@@ -29,7 +31,7 @@ use lsm::{
 };
 use lsm::{
     endpoints::{AddErc20Arg, AddErc20Error},
-    DISCOVER_ARCHIVES_INTERVAL, ICP_TO_CYCLES_CONVERTION_INTERVAL, MAYBE_TOP_OP_INTERVAL,
+    DISCOVER_ARCHIVES_INTERVAL, ICP_TO_CYCLES_CONVERSION_INTERVAL, MAYBE_TOP_OP_INTERVAL,
 };
 
 use num_traits::ToPrimitive;
@@ -40,10 +42,10 @@ fn main() {}
 fn init(arg: LSMarg) {
     match arg {
         LSMarg::Init(init_arg) => {
-            // Initilize casniter state and wasm_store.
+            // Initialize canister state and wasm_store.
             lifecycle::init(init_arg);
         }
-        LSMarg::Upgrade(_upgrade_arg) => ic_cdk::trap("Can not initilize with upgrade args."),
+        LSMarg::Upgrade(_upgrade_arg) => ic_cdk::trap("Can not initialize with upgrade args."),
     }
 
     // Set up timers
@@ -67,11 +69,11 @@ fn post_upgrade(upgrade_args: Option<LSMarg>) {
 }
 fn setup_timers() {
     // Check ICP Balance and convert to Cycles
-    ic_cdk_timers::set_timer_interval(ICP_TO_CYCLES_CONVERTION_INTERVAL, || {
-        ic_cdk::spawn(proccess_convert_icp_to_cycles())
+    ic_cdk_timers::set_timer_interval(ICP_TO_CYCLES_CONVERSION_INTERVAL, || {
+        ic_cdk::spawn(process_convert_icp_to_cycles())
     });
 
-    // Discovering Archives Spwaned by ledgers.
+    // Discovering Archives spawned by ledgers.
     ic_cdk_timers::set_timer_interval(DISCOVER_ARCHIVES_INTERVAL, || {
         ic_cdk::spawn(process_discover_archives())
     });
@@ -107,11 +109,11 @@ fn twin_canister_ids_by_contract(contract: Erc20Contract) -> Option<ManagedCanis
 #[query]
 fn all_twins_canister_ids() -> Vec<ManagedCanisters> {
     read_state(|s| {
-        let managed_cansiters: Vec<ManagedCanisters> = s
+        let managed_canisters: Vec<ManagedCanisters> = s
             .all_managed_canisters_iter()
             .map(|(token_id, canisters)| (token_id, canisters.clone()).into())
             .collect();
-        return managed_cansiters;
+        return managed_canisters;
     })
 }
 
@@ -149,12 +151,12 @@ fn get_lsm_info() -> LedgerManagerInfo {
 }
 
 #[update]
-fn add_native_ls(
+async fn add_native_ls(
     native_ls: InstalledNativeLedgerSuite,
 ) -> Result<(), InvalidNativeInstalledCanistersError> {
     let caller = ic_cdk::caller();
 
-    // Validate args corectness
+    // Validating args correctness
     let validated_native_ls = read_state(|s| native_ls.validate(s))?;
 
     let erc20_token = validated_native_ls.get_erc20_token();
@@ -172,7 +174,7 @@ fn add_native_ls(
         };
     })?;
 
-    // Add the native ldger suite to the state
+    // Add the native ledger suite to the state
     mutate_state(|s| {
         s.record_new_native_erc20_token(erc20_token.clone(), validated_native_ls.clone())
     });
@@ -183,6 +185,30 @@ fn add_native_ls(
         erc20_token,
         validated_native_ls
     );
+
+    // Notify Appic helper about new twin native token
+    // Generate new icp token to be added to appic helper
+    let icp_token = CandidIcpToken {
+        fee: validated_native_ls.fee,
+        decimals: validated_native_ls.decimals,
+        usd_price: "0".to_string(),
+        logo: validated_native_ls.logo,
+        name: validated_native_ls.name,
+        rank: Some(1_u32),
+        ledger_id: validated_native_ls.ledger,
+        token_type: IcpTokenType::Icrc2,
+        symbol: validated_native_ls.symbol,
+    };
+
+    // Notify appic helper of new erc20 twins
+    let helper_client = AppicHelperClient::new();
+
+    helper_client
+        .add_icp_token(icp_token)
+        .await
+        .map_err(|_e| InvalidNativeInstalledCanistersError::FailedToNotifyAppicHelper)?;
+
+    let _ = helper_client.request_update_bridge_pairs().await;
 
     Ok(())
 }
@@ -200,7 +226,7 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
         })
     })?;
 
-    // Get amount of icps required for ledger suite creation
+    // Get amount of ICP token required for ledger suite creation
     let twin_creation_fee_amount_in_icp =
         read_state(|s| s.minimum_tokens_for_new_ledger_suite().icp);
     // Deposit Icp or appic tokens as fee
@@ -217,7 +243,7 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
     let erc20_token: Erc20Token = erc20_args
         .contract
         .try_into()
-        .expect("This opration should not fail");
+        .expect("This operation should not fail");
 
     match deposit_result {
         Err(transfer_error) => Err(AddErc20Error::TransferIcpError(transfer_error)),
@@ -262,7 +288,7 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
                     caller,
                 );
 
-                // Add the leadger suit creation to the queue
+                // Add the ledger suit creation to the queue
                 s.record_new_ledger_suite_request(erc20_token, install_ledger_suite_args);
 
                 Ok(())

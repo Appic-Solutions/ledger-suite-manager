@@ -1,9 +1,7 @@
 (
     variant {
         Init = record {
-            minter_ids = vec {
-                record { 97 : nat; principal "2ztvj-yaaaa-aaaap-ahiza-cai" }
-            };
+            minter_ids = vec {};
             cycles_management = null;
             more_controller_ids = vec {
                 principal "6gplx-n62xg-ky6br-utvsz-l3vfe-jggch-hhico-7tydb-qtwu6-yiyhn-gqe";

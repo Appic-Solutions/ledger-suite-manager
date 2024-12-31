@@ -1,4 +1,4 @@
-pub mod cmc_declrations;
+pub mod cmc_declarations;
 
 use async_trait::async_trait;
 use candid::{CandidType, Nat, Principal};
@@ -18,7 +18,7 @@ use ic_ledger_types::{
 type BlockIndex = u64;
 type Cycles = u128;
 
-use cmc_declrations::{NotifyError, NotifyTopUpArg, NotifyTopUpResult};
+use cmc_declarations::{NotifyError, NotifyTopUpArg, NotifyTopUpResult};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
@@ -27,7 +27,7 @@ use crate::{
     management::{CallError, Reason},
 };
 
-pub const MEMO_TOP_UP_CANISTER: IcpMemo = IcpMemo(0x50555054); // == 'TPUP'
+pub const MEMO_TOP_UP_CANISTER: IcpMemo = IcpMemo(0x50555054); // == 'TOPUP'
 
 pub const MAINNET_CYCLE_MINTER_CANISTER_ID: Principal =
     Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x01, 0x01]);
@@ -47,16 +47,16 @@ pub trait CmcRunTime {
     fn id(&self) -> Principal;
 
     // ICP balance of canister
-    async fn icp_balance(&self) -> Result<u64, IcpToCyclesConvertionError>;
+    async fn icp_balance(&self) -> Result<u64, IcpToCyclesConversionError>;
 
     // Transfers icp to cycles minter canister
     async fn transfer_cmc(&self, icp_amount: u64)
-        -> Result<BlockIndex, IcpToCyclesConvertionError>;
+        -> Result<BlockIndex, IcpToCyclesConversionError>;
 
-    // calls notify_top_op function of cyclesminter canister to convert icp into cycles
-    async fn notify_top_up(&self, block_index: u64) -> Result<Cycles, IcpToCyclesConvertionError>;
+    // calls notify_top_op function of cycles minter canister to convert icp into cycles
+    async fn notify_top_up(&self, block_index: u64) -> Result<Cycles, IcpToCyclesConversionError>;
 
-    // Uses icrc2_transfer_from function to deposit functoin
+    // Uses icrc2_transfer_from function to deposit function
     async fn deposit_icp(
         &self,
         icp_amount: u64,
@@ -77,14 +77,14 @@ pub trait CmcRunTime {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum IcpToCyclesConvertionError {
+pub enum IcpToCyclesConversionError {
     CallError(CallError),
     TransferError(TransferError),
     NotifyError(NotifyError),
     ZeroIcpBalance,
 }
 
-impl From<CallError> for IcpToCyclesConvertionError {
+impl From<CallError> for IcpToCyclesConversionError {
     fn from(value: CallError) -> Self {
         Self::CallError(value)
     }
@@ -98,7 +98,7 @@ impl CmcRunTime for CyclesConvertor {
         ic_cdk::id()
     }
 
-    async fn icp_balance(&self) -> Result<u64, IcpToCyclesConvertionError> {
+    async fn icp_balance(&self) -> Result<u64, IcpToCyclesConversionError> {
         let result: Nat = self
             .call_canister(
                 MAINNET_LEDGER_CANISTER_ID,
@@ -115,7 +115,7 @@ impl CmcRunTime for CyclesConvertor {
     async fn transfer_cmc(
         &self,
         icp_amount: u64,
-    ) -> Result<BlockIndex, IcpToCyclesConvertionError> {
+    ) -> Result<BlockIndex, IcpToCyclesConversionError> {
         let target_subaccount = IcpSubaccount::from(self.id());
 
         let transfer_args = IcpTransferArgs {
@@ -126,18 +126,18 @@ impl CmcRunTime for CyclesConvertor {
             to: IcpAccountIdentifier::new(&self.id(), &target_subaccount),
             created_at_time: None,
         };
-        // Transfering icp into cycles minting canister
+        // Transferring icp into cycles minting canister
         let result: Result<u64, ic_ledger_types::TransferError> = self
             .call_canister(MAINNET_LEDGER_CANISTER_ID, TRANSFER_METHOD, transfer_args)
             .await?;
 
         match result {
             Ok(block_index) => Ok(block_index),
-            Err(error) => Err(IcpToCyclesConvertionError::TransferError(error)),
+            Err(error) => Err(IcpToCyclesConversionError::TransferError(error)),
         }
     }
 
-    async fn notify_top_up(&self, block_index: u64) -> Result<Cycles, IcpToCyclesConvertionError> {
+    async fn notify_top_up(&self, block_index: u64) -> Result<Cycles, IcpToCyclesConversionError> {
         let top_up_args = NotifyTopUpArg {
             canister_id: self.id(),
             block_index,
@@ -153,7 +153,7 @@ impl CmcRunTime for CyclesConvertor {
         match result {
             NotifyTopUpResult::Ok(cycles) => Ok(cycles.0.to_u128().unwrap()),
             NotifyTopUpResult::Err(notify_error) => {
-                Err(IcpToCyclesConvertionError::NotifyError(notify_error))
+                Err(IcpToCyclesConversionError::NotifyError(notify_error))
             }
         }
     }
@@ -179,13 +179,13 @@ impl CmcRunTime for CyclesConvertor {
                 .unwrap_or_else(|| {
                     log!(
                         INFO,
-                        "Subtracting Tokens '{}' - '{}' failed because the underlying u64 underflowed",
+                        "Subtracting Tokens '{}' - '{}' failed because the underlying u64 under-flowed",
                         icp_amount,
                         DEFAULT_FEE.e8s()
                     );
 
                     panic!(
-                        "Subtracting Tokens {} - {} failed because the underlying u64 underflowed",
+                        "Subtracting Tokens {} - {} failed because the underlying u64 under-flowed",
                         icp_amount,
                         DEFAULT_FEE.e8s()
                     )

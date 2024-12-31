@@ -7,7 +7,6 @@
       "wasm": "target/wasm32-unknown-unknown/release/lsm.wasm",
       "shrink": false,
       "build": ["make"],
-      "init_arg_file": "init.did",
       "metadata": [
         {
           "name": "candid:service"

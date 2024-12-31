@@ -4,7 +4,7 @@
 use candid::{self, CandidType, Decode, Deserialize, Encode, Principal};
 use ic_cdk::api::call::CallResult as Result;
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum IcpTokenType {
     #[serde(rename = "ICRC1")]
     Icrc1,
@@ -17,7 +17,7 @@ pub enum IcpTokenType {
     Other(String),
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct CandidIcpToken {
     pub fee: candid::Nat,
     pub decimals: u8,
@@ -30,13 +30,13 @@ pub struct CandidIcpToken {
     pub symbol: String,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum Operator {
     AppicMinter,
     DfinityCkEthMinter,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct CandidEvmToken {
     pub decimals: u8,
     pub logo: String,
@@ -46,27 +46,27 @@ pub struct CandidEvmToken {
     pub symbol: String,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct TokenPair {
     pub operator: Operator,
     pub evm_token: CandidEvmToken,
     pub icp_token: CandidIcpToken,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum CandidErc20TwinLedgerSuiteStatus {
     PendingApproval,
     Created,
     Installed,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum CandidErc20TwinLedgerSuiteFee {
     Icp(candid::Nat),
     Appic(candid::Nat),
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct CandidLedgerSuiteRequest {
     pub erc20_contract: String,
     pub status: CandidErc20TwinLedgerSuiteStatus,
@@ -78,31 +78,31 @@ pub struct CandidLedgerSuiteRequest {
     pub icp_token: Option<CandidIcpToken>,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct GetEvmTokenArgs {
     pub chain_id: candid::Nat,
     pub address: String,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct GetIcpTokenArgs {
     pub ledger_id: Principal,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum TransactionSearchParam {
     TxWithdrawalId(candid::Nat),
     TxMintId(candid::Nat),
     TxHash(String),
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct GetTxParams {
     pub chain_id: candid::Nat,
     pub search_param: TransactionSearchParam,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum EvmToIcpStatus {
     Invalid(String),
     PendingVerification,
@@ -111,7 +111,7 @@ pub enum EvmToIcpStatus {
     Quarantined,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct CandidEvmToIcp {
     pub status: EvmToIcpStatus,
     pub principal: Principal,
@@ -131,7 +131,7 @@ pub struct CandidEvmToIcp {
     pub total_gas_spent: Option<candid::Nat>,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum IcpToEvmStatus {
     Failed,
     SignedTransaction,
@@ -142,10 +142,9 @@ pub enum IcpToEvmStatus {
     Reimbursed,
     Successful,
     Created,
-    FinalizedTransaction,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct CandidIcpToEvm {
     pub effective_gas_price: Option<candid::Nat>,
     pub status: IcpToEvmStatus,
@@ -168,18 +167,18 @@ pub struct CandidIcpToEvm {
     pub native_ledger_burn_index: candid::Nat,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum Transaction {
     EvmToIcp(CandidEvmToIcp),
     IcpToEvm(CandidIcpToEvm),
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct Icrc28TrustedOriginsResponse {
     pub trusted_origins: Vec<String>,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct AddEvmToIcpTx {
     pub principal: Principal,
     pub transaction_hash: String,
@@ -194,22 +193,22 @@ pub struct AddEvmToIcpTx {
     pub total_gas_spent: candid::Nat,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum AddEvmToIcpTxError {
     InvalidAddress,
     ChinNotSupported,
     InvalidTokenPairs,
     InvalidTokenContract,
-    TxAlreadyExsits,
+    TxAlreadyExists,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum Result_ {
     Ok,
     Err(AddEvmToIcpTxError),
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct AddIcpToEvmTx {
     pub destination: String,
     pub withdrawal_amount: candid::Nat,
@@ -224,22 +223,22 @@ pub struct AddIcpToEvmTx {
     pub native_ledger_burn_index: candid::Nat,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum AddIcpToEvmTxError {
     InvalidDestination,
     ChinNotSupported,
     InvalidTokenPairs,
     InvalidTokenContract,
-    TxAlreadyExsits,
+    TxAlreadyExists,
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum Result1 {
     Ok,
     Err(AddIcpToEvmTxError),
 }
 
-#[derive(CandidType, Debug, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct CandidAddErc20TwinLedgerSuiteRequest {
     pub status: CandidErc20TwinLedgerSuiteStatus,
     pub creator: Principal,
@@ -260,16 +259,51 @@ impl Service {
     pub async fn get_bridge_pairs(&self) -> Result<(Vec<TokenPair>,)> {
         ic_cdk::call(self.0, "get_bridge_pairs", ()).await
     }
-    pub async fn get_erc20_twin_ls_reqests_by_creator(
+    pub async fn get_erc_20_twin_ls_requests_by_creator(
         &self,
         arg0: Principal,
     ) -> Result<(Vec<CandidLedgerSuiteRequest>,)> {
-        ic_cdk::call(self.0, "get_erc20s_twin_ls_reqests_by_creator", (arg0,)).await
+        ic_cdk::call(self.0, "get_erc20_twin_ls_requests_by_creator", (arg0,)).await
     }
     pub async fn get_evm_token(&self, arg0: GetEvmTokenArgs) -> Result<(Option<CandidEvmToken>,)> {
         ic_cdk::call(self.0, "get_evm_token", (arg0,)).await
     }
-
+    pub async fn get_icp_token(&self, arg0: GetIcpTokenArgs) -> Result<(Option<CandidIcpToken>,)> {
+        ic_cdk::call(self.0, "get_icp_token", (arg0,)).await
+    }
+    pub async fn get_icp_tokens(&self) -> Result<(Vec<CandidIcpToken>,)> {
+        ic_cdk::call(self.0, "get_icp_tokens", ()).await
+    }
+    pub async fn get_transaction(&self, arg0: GetTxParams) -> Result<(Option<Transaction>,)> {
+        ic_cdk::call(self.0, "get_transaction", (arg0,)).await
+    }
+    pub async fn get_txs_by_address(&self, arg0: String) -> Result<(Vec<Transaction>,)> {
+        ic_cdk::call(self.0, "get_txs_by_address", (arg0,)).await
+    }
+    pub async fn get_txs_by_address_principal_combination(
+        &self,
+        arg0: String,
+        arg1: Principal,
+    ) -> Result<(Vec<Transaction>,)> {
+        ic_cdk::call(
+            self.0,
+            "get_txs_by_address_principal_combination",
+            (arg0, arg1),
+        )
+        .await
+    }
+    pub async fn get_txs_by_principal(&self, arg0: Principal) -> Result<(Vec<Transaction>,)> {
+        ic_cdk::call(self.0, "get_txs_by_principal", (arg0,)).await
+    }
+    pub async fn icrc_28_trusted_origins(&self) -> Result<(Icrc28TrustedOriginsResponse,)> {
+        ic_cdk::call(self.0, "icrc28_trusted_origins", ()).await
+    }
+    pub async fn new_evm_to_icp_tx(&self, arg0: AddEvmToIcpTx) -> Result<(Result_,)> {
+        ic_cdk::call(self.0, "new_evm_to_icp_tx", (arg0,)).await
+    }
+    pub async fn new_icp_to_evm_tx(&self, arg0: AddIcpToEvmTx) -> Result<(Result1,)> {
+        ic_cdk::call(self.0, "new_icp_to_evm_tx", (arg0,)).await
+    }
     pub async fn new_twin_ls_request(
         &self,
         arg0: CandidAddErc20TwinLedgerSuiteRequest,

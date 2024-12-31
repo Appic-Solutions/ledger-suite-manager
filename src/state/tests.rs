@@ -280,6 +280,10 @@ mod installed_ledger_suite {
     fn validated_iceth_canisters() -> CandidInstalledNativeLedgerSuite {
         let iceth = iceth_installed_canisters();
         CandidInstalledNativeLedgerSuite {
+            decimals: iceth.decimals,
+            fee: iceth.fee,
+            logo: iceth.logo,
+            name: iceth.name,
             symbol: iceth.symbol,
             ledger: iceth.ledger,
             ledger_wasm_hash: iceth.ledger_wasm_hash.parse().unwrap(),
@@ -292,6 +296,10 @@ mod installed_ledger_suite {
 
     fn iceth_installed_canisters() -> CandidInstalledNativeLedgerSuite {
         CandidInstalledNativeLedgerSuite {
+            decimals: 18_u8,
+            fee: Nat::from(1000000000000000_u64),
+            logo: "".to_string(),
+            name: "".to_string(),
             symbol: "icETH".to_string(),
             ledger: "ss2fx-dyaaa-aaaar-qacoq-cai".parse().unwrap(),
 
@@ -308,6 +316,10 @@ mod installed_ledger_suite {
 
     fn icmatic_installed_canisters() -> CandidInstalledNativeLedgerSuite {
         CandidInstalledNativeLedgerSuite {
+            decimals: 18_u8,
+            fee: Nat::from(100000_u64),
+            logo: "".to_string(),
+            name: "".to_string(),
             symbol: "icMATIC".to_string(),
             ledger: "ryjl3-tyaaa-aaaaa-aaaba-cai".parse().unwrap(),
 

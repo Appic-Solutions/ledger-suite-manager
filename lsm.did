@@ -42,6 +42,10 @@ type InitArg = record {
   twin_ls_creation_fee_icp_token : nat;
 };
 type InstalledNativeLedgerSuite = record {
+  fee : nat;
+  decimals : nat8;
+  logo : text;
+  name : text;
   chain_id : nat;
   ledger_wasm_hash : text;
   ledger : principal;
@@ -54,6 +58,7 @@ type InvalidNativeInstalledCanistersError = variant {
   TokenAlreadyManaged;
   NotAllowed;
   WasmHashError;
+  FailedToNotifyAppicHelper;
   AlreadyManagedPrincipals;
 };
 type LSMarg = variant { Upgrade : UpgradeArg; Init : InitArg };

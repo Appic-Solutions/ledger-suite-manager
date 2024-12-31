@@ -127,7 +127,7 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
             token_symbol: args.ledger_init_arg.token_symbol.clone(),
         },
     );
-    // Get amount of icps required for ledger suite creation
+    // Get amount of ICP token required for ledger suite creation
     let twin_creation_fee_amount_in_icp =
         read_state(|s| s.minimum_tokens_for_new_ledger_suite().icp);
 
@@ -195,10 +195,10 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
     )
     .await?;
 
-    // notyfing minter for new erc token
+    // notifying minter for new erc token
     let minter_id = read_state(|s| s.minter_id_owned(args.contract.chain_id()));
 
-    let notifiy_result = match minter_id {
+    let notify_result = match minter_id {
         Some(minter_id) => notify_erc20_added(&args.contract, &minter_id, runtime).await,
         None => Err(TaskError::MinterNotFound(args.contract.chain_id().clone())),
     }?;
@@ -227,7 +227,7 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
         args.contract,
     );
 
-    Ok(notifiy_result)
+    Ok(notify_result)
 }
 
 fn record_new_erc20_token_once(token: Erc20Token, metadata: CanistersMetadata) {
@@ -479,30 +479,3 @@ pub async fn notify_erc20_added<R: CanisterRuntime>(
         _ => Err(TaskError::LedgerNotFound(token.clone())),
     }
 }
-
-// pub async fn notify_appic_helper_casniter<R: CanisterRuntime>(
-//     token: &Erc20Token,
-//     helper_id: Principal,
-//     runtime: &R,
-// ) -> Result<(), TaskError> {
-//     let managed_canisters = read_state(|s| s.managed_canisters(&token).cloned());
-//     match managed_canisters {
-//         Some(Canisters {
-//             ledger: Some(ledger),
-//             metadata,
-//             ..
-//         }) => {
-//             let args = AddErc20Token {
-//                 chain_id: Nat::from(*token.chain_id().as_ref()),
-//                 address: token.address().to_string(),
-//                 erc20_token_symbol: metadata.token_symbol,
-//                 erc20_ledger_id: *ledger.canister_id(),
-//             };
-//             runtime
-//                 .call_canister(minter_id, "add_erc20_token", args)
-//                 .await
-//                 .map_err(TaskError::InterCanisterCallError)
-//         }
-//         _ => Err(TaskError::LedgerNotFound(token.clone())),
-//     }
-// }

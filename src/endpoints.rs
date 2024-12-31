@@ -10,7 +10,7 @@ use crate::{
     management::CallError,
     state::{
         Canister, Canisters, CanistersMetadata, Erc20Token, Hash, IndexCanister, LedgerCanister,
-        ManagedCanisterStatus as StateManagedCasniter,
+        ManagedCanisterStatus as StateManagedCanister,
     },
 };
 
@@ -184,6 +184,10 @@ impl UpdateCyclesManagement {
 #[derive(Clone, PartialEq, Debug, CandidType, Deserialize)]
 pub struct InstalledNativeLedgerSuite {
     pub symbol: String,
+    pub fee: Nat,
+    pub decimals: u8,
+    pub logo: String,
+    pub name: String,
     pub ledger: Principal,
     pub ledger_wasm_hash: String,
     pub index: Principal,
@@ -195,15 +199,15 @@ pub struct InstalledNativeLedgerSuite {
 impl From<InstalledNativeLedgerSuite> for Canisters {
     fn from(value: InstalledNativeLedgerSuite) -> Self {
         Self {
-            ledger: Some(LedgerCanister::new(StateManagedCasniter::Installed {
+            ledger: Some(LedgerCanister::new(StateManagedCanister::Installed {
                 canister_id: value.ledger,
                 installed_wasm_hash: Hash::from_str(&value.ledger_wasm_hash)
-                    .expect("Wasm Hashes Provided by minter casniter should not fail"),
+                    .expect("Wasm Hashes Provided by minter canister should not fail"),
             })),
-            index: Some(IndexCanister::new(StateManagedCasniter::Installed {
+            index: Some(IndexCanister::new(StateManagedCanister::Installed {
                 canister_id: value.index,
                 installed_wasm_hash: Hash::from_str(&value.index_wasm_hash)
-                    .expect("Wasm Hashes Provided by minter casniter should not fail"),
+                    .expect("Wasm Hashes Provided by minter canister should not fail"),
             })),
             archives: value.archives,
             metadata: CanistersMetadata {
@@ -218,7 +222,8 @@ pub enum InvalidNativeInstalledCanistersError {
     WasmHashError,
     TokenAlreadyManaged,
     AlreadyManagedPrincipals,
-    // Only minter casniters are allowed to add native ledger suites
+    FailedToNotifyAppicHelper,
+    // Only minter canisters are allowed to add native ledger suites
     NotAllowed,
 }
 

@@ -11,7 +11,7 @@ declare_log_buffer!(name = INFO_BUF, capacity = 1000);
 // Low-priority info messages.
 declare_log_buffer!(name = DEBUG_BUF, capacity = 1000);
 
-// Higest-priority info messages.
+// Highest-priority info messages.
 declare_log_buffer!(name = ERROR_BUF, capacity = 1000);
 
 pub const INFO: PrintProxySink = PrintProxySink("INFO", &INFO_BUF);
