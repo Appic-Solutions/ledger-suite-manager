@@ -485,8 +485,6 @@ mod schema_upgrades {
         cycles_management: CyclesManagement,
         more_controller_ids: Vec<Principal>,
         minter_id: BTreeMap<ChainId, Principal>,
-        /// Locks preventing concurrent execution timer tasks
-        pub active_tasks: HashSet<PeriodicTasksTypes>,
         #[serde(default)]
         ledger_suite_version: Option<LedgerSuiteVersion>,
         twin_ledger_suites_to_be_installed: BTreeMap<Erc20Token, InstallLedgerSuiteArgs>,
@@ -505,7 +503,6 @@ mod schema_upgrades {
                 cycles_management,
                 more_controller_ids,
                 minter_id,
-                active_tasks,
                 ledger_suite_version,
                 twin_ledger_suites_to_be_installed,
                 failed_ledger_suite_installs,
@@ -521,7 +518,6 @@ mod schema_upgrades {
                 cycles_management,
                 more_controller_ids,
                 minter_id,
-                active_tasks,
                 ledger_suite_version,
                 twin_ledger_suites_to_be_installed,
                 failed_ledger_suite_installs,

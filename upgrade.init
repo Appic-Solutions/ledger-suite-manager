@@ -1,0 +1,14 @@
+(
+  variant {
+    Upgrade = record {
+      cycles_management = null;
+      archive_compressed_wasm_hash = null;
+      new_minter_ids = opt vec {
+        record { 56 : nat; principal "2ztvj-yaaaa-aaaap-ahiza-cai" };
+      };
+      ledger_compressed_wasm_hash = null;
+      index_compressed_wasm_hash = null;
+      twin_ls_creation_fees = null;
+    }
+  },
+)

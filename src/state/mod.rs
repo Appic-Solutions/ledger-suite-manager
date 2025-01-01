@@ -534,9 +534,6 @@ pub struct State {
     #[serde(default)]
     ledger_suite_version: Option<LedgerSuiteVersion>,
 
-    /// Locks preventing concurrent execution timer tasks
-    pub active_tasks: HashSet<PeriodicTasksTypes>,
-
     // Collected icp or appic token in the beginning for ledger suite creation
     collected_icp_token: u128,
     collected_appic_token: u128,
@@ -817,7 +814,6 @@ impl TryFrom<InitArg> for State {
             more_controller_ids,
             minter_id: minter_ids_map,
             ledger_suite_version: Default::default(),
-            active_tasks: Default::default(),
             twin_ledger_suites_to_be_installed: Default::default(),
             failed_ledger_suite_installs: Default::default(),
             collected_icp_token: 0,

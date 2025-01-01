@@ -19,6 +19,8 @@ const LEDGER_PRINCIPAL: Principal = Principal::from_slice(&[1_u8; 29]);
 const INDEX_PRINCIPAL: Principal = Principal::from_slice(&[2_u8; 29]);
 const MINTER_PRINCIPAL: Principal = Principal::from_slice(&[3_u8; 29]);
 
+// TODO: Convert test cases to pocket-ic
+
 #[tokio::test]
 async fn should_install_ledger_suite() {
     init_state();
