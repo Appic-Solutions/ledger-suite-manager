@@ -90,6 +90,17 @@ pub struct GetIcpTokenArgs {
 }
 
 #[derive(CandidType, Deserialize, Debug)]
+pub struct MinterArgs {
+    pub last_observed_event: candid::Nat,
+    pub last_scraped_event: candid::Nat,
+    pub operator: Operator,
+    pub chain_id: candid::Nat,
+    pub icp_to_evm_fee: candid::Nat,
+    pub evm_to_icp_fee: candid::Nat,
+    pub minter_id: Principal,
+}
+
+#[derive(CandidType, Deserialize, Debug)]
 pub enum TransactionSearchParam {
     TxWithdrawalId(candid::Nat),
     TxMintId(candid::Nat),
@@ -273,6 +284,9 @@ impl Service {
     }
     pub async fn get_icp_tokens(&self) -> Result<(Vec<CandidIcpToken>,)> {
         ic_cdk::call(self.0, "get_icp_tokens", ()).await
+    }
+    pub async fn get_minters(&self) -> Result<(Vec<MinterArgs>,)> {
+        ic_cdk::call(self.0, "get_minters", ()).await
     }
     pub async fn get_transaction(&self, arg0: GetTxParams) -> Result<(Option<Transaction>,)> {
         ic_cdk::call(self.0, "get_transaction", (arg0,)).await

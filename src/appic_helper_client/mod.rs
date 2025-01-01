@@ -92,7 +92,7 @@ impl AppicHelperClient {
 
     pub async fn request_update_bridge_pairs(&self) -> Result<(), CallError> {
         self.runtime
-            .call_canister(self.canister_id, "update_twin_ls_request", ())
+            .call_canister(self.canister_id, "request_update_bridge_pairs", ())
             .await
     }
 }
