@@ -114,6 +114,7 @@ pub async fn process_install_ledger_suites() {
             return;
         }
     };
+
     let twin_ledger_suites_to_be_installed =
         read_state(|s| s.twin_ledger_suites_to_be_installed.clone());
 

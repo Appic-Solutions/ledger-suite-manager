@@ -216,22 +216,7 @@ impl CmcRunTime for CyclesConvertor {
         I: CandidType + Debug + Send + 'static,
         O: CandidType + DeserializeOwned + Debug + 'static,
     {
-        log!(
-            DEBUG,
-            "Calling canister '{}' with method '{}' and payload '{:?}'",
-            canister_id,
-            method,
-            args
-        );
         let res: Result<(O,), _> = ic_cdk::api::call::call(canister_id, method, (&args,)).await;
-        log!(
-            DEBUG,
-            "Result of calling canister '{}' with method '{}' and payload '{:?}': {:?}",
-            canister_id,
-            method,
-            args,
-            res
-        );
 
         match res {
             Ok((output,)) => Ok(output),

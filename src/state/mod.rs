@@ -13,7 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_bytes::ByteArray;
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::once;
 use std::marker::PhantomData;
@@ -24,7 +24,6 @@ use crate::endpoints::{
     InvalidNativeInstalledCanistersError, UpdateLedgerSuiteCreationFee,
 };
 use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
-use crate::ledger_suite_manager::PeriodicTasksTypes;
 use crate::storage::memory::{state_memory, StableMemory};
 
 thread_local! {
