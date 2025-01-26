@@ -418,7 +418,6 @@ mod schema_upgrades {
     use crate::endpoints::CyclesManagement;
     use crate::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
     use crate::ledger_suite_manager::test_fixtures::{usdc, usdc_ledger_suite};
-    use crate::ledger_suite_manager::PeriodicTasksTypes;
     use crate::state::test_fixtures::arb_state;
     use crate::state::{
         decode, encode, Canisters, CanistersMetadata, ChainId, Erc20Token, IndexCanister,
@@ -428,7 +427,7 @@ mod schema_upgrades {
     use candid::{Deserialize, Principal};
     use proptest::proptest;
     use serde::Serialize;
-    use std::collections::{BTreeMap, HashSet};
+    use std::collections::BTreeMap;
 
     #[derive(Clone, PartialEq, Debug, Default, Deserialize, Serialize)]
     pub struct ManagedCanistersPreviousVersion {

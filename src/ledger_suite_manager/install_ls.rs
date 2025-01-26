@@ -220,6 +220,11 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
         .await
         .map_err(|e| TaskError::InterCanisterCallError(e))?;
 
+    helper_client
+        .request_update_bridge_pairs()
+        .await
+        .map_err(|e| TaskError::InterCanisterCallError(e))?;
+
     log!(
         INFO,
         "Notified minter {}  for {:?}",

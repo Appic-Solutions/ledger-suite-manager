@@ -142,4 +142,5 @@ service : (LSMarg) -> {
   twin_canister_ids_by_contract : (Erc20Contract) -> (
       opt ManagedCanisterIds,
     ) query;
+  update_twin_creation_fees : (UpdateLedgerSuiteCreationFee) -> ();
 }

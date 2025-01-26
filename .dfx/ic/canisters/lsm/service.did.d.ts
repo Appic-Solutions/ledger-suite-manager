@@ -155,6 +155,10 @@ export interface _SERVICE {
     [Erc20Contract],
     [] | [ManagedCanisterIds]
   >,
+  'update_twin_creation_fees' : ActorMethod<
+    [UpdateLedgerSuiteCreationFee],
+    undefined
+  >,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

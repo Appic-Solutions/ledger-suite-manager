@@ -23,7 +23,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
 use crate::{
-    logs::{DEBUG, INFO},
+    logs::INFO,
     management::{CallError, Reason},
 };
 

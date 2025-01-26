@@ -1,8 +1,5 @@
-use ic_canister_log::log;
-
-use crate::{
-    cmc_client::{CmcRunTime, CyclesConvertor, IcpToCyclesConversionError, DEFAULT_TRANSFER_FEE},
-    logs::INFO,
+use crate::cmc_client::{
+    CmcRunTime, CyclesConvertor, IcpToCyclesConversionError, DEFAULT_TRANSFER_FEE,
 };
 
 pub async fn convert_icp_balance_to_cycles(

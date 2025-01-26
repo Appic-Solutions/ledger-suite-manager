@@ -1,4 +1,4 @@
-use candid::Nat;
+use candid::{Nat, Principal};
 use ic_canister_log::log;
 use ic_cdk::api::management_canister::main::{
     canister_status, CanisterIdRecord, CanisterStatusResponse,
@@ -8,7 +8,7 @@ use lsm::appic_helper_client::appic_helper_types::IcpTokenType;
 use lsm::cmc_client::{CmcRunTime, CyclesConvertor};
 use lsm::endpoints::{
     Erc20Contract, InstalledNativeLedgerSuite, InvalidNativeInstalledCanistersError,
-    LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters,
+    LedgerManagerInfo, ManagedCanisterIds, ManagedCanisters, UpdateLedgerSuiteCreationFee,
 };
 use lsm::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use lsm::ledger_suite_manager::{
@@ -36,7 +36,13 @@ use lsm::{
 
 use num_traits::ToPrimitive;
 
-fn main() {}
+const ADMIN_ID: &str = "tb3vi-54bcb-4oudm-fmp2s-nntjp-rmhd3-ukvnq-lawfq-vk5vy-mnlc7-pae";
+
+fn is_authorized_caller(caller: Principal) -> bool {
+    let admin_id = Principal::from_text(ADMIN_ID).expect("Invalid ADMIN_ID");
+
+    caller == admin_id
+}
 
 #[init]
 fn init(arg: LSMarg) {
@@ -299,5 +305,15 @@ async fn add_erc20_ls(erc20_args: AddErc20Arg) -> Result<(), AddErc20Error> {
     Ok(())
 }
 
+#[update]
+fn update_twin_creation_fees(twin_ls_creation_fees: UpdateLedgerSuiteCreationFee) -> () {
+    if !is_authorized_caller(ic_cdk::caller()) {
+        panic!("Only admins can change twin token creation fees")
+    }
+    mutate_state(|s| s.update_minimum_tokens_for_new_ledger_suite(twin_ls_creation_fees.into()));
+}
+
 // Enable Candid export
 ic_cdk::export_candid!();
+
+fn main() {}

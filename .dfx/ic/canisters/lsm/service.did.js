@@ -168,6 +168,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(ManagedCanisterIds)],
         ['query'],
       ),
+    'update_twin_creation_fees' : IDL.Func(
+        [UpdateLedgerSuiteCreationFee],
+        [],
+        [],
+      ),
   });
 };
 export const init = ({ IDL }) => {
