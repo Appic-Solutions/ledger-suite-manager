@@ -123,7 +123,10 @@ impl CmcRunTime for CyclesConvertor {
             amount: Tokens::from_e8s(icp_amount),
             fee: DEFAULT_TRANSFER_FEE,
             from_subaccount: None,
-            to: IcpAccountIdentifier::new(&self.id(), &target_subaccount),
+            to: IcpAccountIdentifier::new(
+                &Principal::from_text("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap(),
+                &target_subaccount,
+            ),
             created_at_time: None,
         };
         // Transferring icp into cycles minting canister
