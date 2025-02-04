@@ -128,6 +128,7 @@ pub trait CanisterRuntime {
         &self,
         canister_id: Principal,
         wasm_module: Vec<u8>,
+        upgrade_args: Vec<u8>,
     ) -> Result<(), CallError>;
 
     async fn canister_cycles(&self, canister_id: Principal) -> Result<u128, CallError>;
@@ -275,12 +276,13 @@ impl CanisterRuntime for IcCanisterRuntime {
         &self,
         canister_id: Principal,
         wasm_module: Vec<u8>,
+        upgrade_args: Vec<u8>,
     ) -> Result<(), CallError> {
         let install_code = InstallCodeArgs {
             mode: CanisterInstallMode::Upgrade,
             canister_id: PrincipalId::from(canister_id),
             wasm_module,
-            arg: Encode!(&()).unwrap(),
+            arg: upgrade_args,
             compute_allocation: None,
             memory_allocation: None,
             sender_canister_version: None,

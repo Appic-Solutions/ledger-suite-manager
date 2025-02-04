@@ -185,7 +185,7 @@ pub async fn install_ledger_suite<R: CanisterRuntime>(
             .await?;
     let index_arg = Some(IndexArg::Init(IndexInitArg {
         ledger_id: ledger_canister_id,
-        retrieve_blocks_from_ledger_interval_seconds: None,
+        retrieve_blocks_from_ledger_interval_seconds: Some(60_u64),
     }));
     install_canister_once::<Index, _, _>(
         &args.contract,

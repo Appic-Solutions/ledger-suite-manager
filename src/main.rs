@@ -1,9 +1,14 @@
-use candid::{Nat, Principal};
+use std::collections::BTreeSet;
+use std::time::Duration;
+
+use candid::{Encode, Nat, Principal};
 use ic_canister_log::log;
 use ic_cdk::api::management_canister::main::{
     canister_status, CanisterIdRecord, CanisterStatusResponse,
 };
 use ic_cdk_macros::{init, post_upgrade, query, update};
+use ic_icrc1_index_ng::UpgradeArg;
+use ic_stable_structures::Storable;
 use lsm::appic_helper_client::appic_helper_types::IcpTokenType;
 use lsm::cmc_client::{CmcRunTime, CyclesConvertor};
 use lsm::endpoints::{
@@ -13,14 +18,15 @@ use lsm::endpoints::{
 use lsm::ledger_suite_manager::install_ls::InstallLedgerSuiteArgs;
 use lsm::ledger_suite_manager::{
     process_convert_icp_to_cycles, process_discover_archives, process_install_ledger_suites,
-    process_maybe_topup,
+    process_maybe_topup, TaskError,
 };
 
 use lsm::appic_helper_client::appic_helper_types::CandidIcpToken;
 use lsm::lifecycle::{self, LSMarg};
 use lsm::logs::INFO;
-use lsm::state::{mutate_state, read_state, Canisters, Erc20Token};
-use lsm::storage::read_wasm_store;
+use lsm::management::{CanisterRuntime, IcCanisterRuntime};
+use lsm::state::{mutate_state, read_state, Canisters, Erc20Token, Index, LedgerSuiteVersion};
+use lsm::storage::{read_wasm_store, wasm_store_try_get};
 use lsm::{
     appic_helper_client::appic_helper_types::{
         CandidAddErc20TwinLedgerSuiteRequest, CandidErc20TwinLedgerSuiteFee,
@@ -93,6 +99,9 @@ fn setup_timers() {
     ic_cdk_timers::set_timer_interval(INSTALL_LEDGER_SUITE_INTERVAL, || {
         ic_cdk::spawn(process_install_ledger_suites())
     });
+
+    // Update index canisters
+    // ic_cdk_timers::set_timer(Duration::from_secs(10), || ic_cdk::spawn(upgrade_indexes()));
 }
 
 #[update]
@@ -312,6 +321,71 @@ fn update_twin_creation_fees(twin_ls_creation_fees: UpdateLedgerSuiteCreationFee
     }
     mutate_state(|s| s.update_minimum_tokens_for_new_ledger_suite(twin_ls_creation_fees.into()));
 }
+
+// pub async fn upgrade_indexes() -> () {
+//     let runtime = IcCanisterRuntime {};
+//     let managed_principals: BTreeSet<_> = read_state(|s| {
+//         s.all_managed_canisters_iter()
+//             .map(|(_token, canisters)| *canisters.index_canister_id().unwrap())
+//             .collect()
+//     });
+//     if managed_principals.is_empty() {
+//         log!(INFO, "[Upgrade Index]: No managed canisters to top-up");
+//         return ();
+//     }
+
+//     let LedgerSuiteVersion {
+//         ledger_compressed_wasm_hash,
+//         index_compressed_wasm_hash,
+//         archive_compressed_wasm_hash: _,
+//     } = read_state(|s| {
+//         s.ledger_suite_version()
+//             .map(|lsv| lsv.clone())
+//             .expect("ERROR: [Upgrade Index] ledger suite version missing")
+//     });
+
+//     let wasm =
+//         match read_wasm_store(|s| wasm_store_try_get::<Index>(s, &index_compressed_wasm_hash)) {
+//             Ok(Some(wasm)) => Ok(wasm),
+//             Ok(None) => {
+//                 log!(
+//                     INFO,
+//                     "ERROR: failed to install  canister for  at 'wasm hash  not found",
+//                 );
+//                 Err(TaskError::WasmHashNotFound(
+//                     index_compressed_wasm_hash.clone(),
+//                 ))
+//             }
+//             Err(e) => {
+//                 log!(INFO, "ERROR: failed to install  canister for  at ",);
+//                 Err(TaskError::WasmStoreError(e))
+//             }
+//         }
+//         .unwrap();
+
+//     for (canister_id) in managed_principals.into_iter() {
+//         let result = runtime
+//             .upgrade_canister(
+//                 canister_id,
+//                 wasm.clone().to_bytes(),
+//                 Encode!(&UpgradeArg {
+//                     ledger_id: None,
+//                     retrieve_blocks_from_ledger_interval_seconds: Some(60),
+//                 })
+//                 .expect("BUG:[Upgrade Index] failed to encode init arg"),
+//             )
+//             .await;
+
+//         log!(
+//             INFO,
+//             "[Upgrade Index]: Upgraded index {} with result {:?}",
+//             canister_id,
+//             result
+//         );
+//     }
+
+//     ()
+// }
 
 // Enable Candid export
 ic_cdk::export_candid!();

@@ -284,6 +284,7 @@ mod mock {
                 &self,
                 canister_id: Principal,
                 wasm_module:Vec<u8>,
+                upgrade_args:Vec<u8>,
             ) -> Result<(), CallError>;
 
             async fn canister_cycles(
