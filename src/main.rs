@@ -370,7 +370,7 @@ fn update_twin_creation_fees(twin_ls_creation_fees: UpdateLedgerSuiteCreationFee
 //                 wasm.clone().to_bytes(),
 //                 Encode!(&UpgradeArg {
 //                     ledger_id: None,
-//                     retrieve_blocks_from_ledger_interval_seconds: Some(60),
+//                     retrieve_blocks_from_ledger_interval_seconds: Some(600),
 //                 })
 //                 .expect("BUG:[Upgrade Index] failed to encode init arg"),
 //             )
